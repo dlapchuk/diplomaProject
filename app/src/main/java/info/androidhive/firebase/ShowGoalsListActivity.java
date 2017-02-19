@@ -41,7 +41,7 @@ public class ShowGoalsListActivity extends AppCompatActivity {
 
         getNames();
         System.out.println(NameList.size());
-        arrayAdapter = new ArrayAdapter<>(this,android.R.layout.simple_list_item_1, NameList);
+        arrayAdapter = new GoalAdapter(this,android.R.layout.simple_list_item_1, NameList);
         animalList.setAdapter(arrayAdapter);
 
         animalList.setOnItemClickListener(new AdapterView.OnItemClickListener()
