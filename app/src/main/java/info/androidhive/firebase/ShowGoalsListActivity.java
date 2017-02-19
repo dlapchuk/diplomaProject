@@ -31,7 +31,7 @@ public class ShowGoalsListActivity extends AppCompatActivity {
     ArrayAdapter<Goal> arrayAdapter;
     DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference();
     DatabaseReference locations = mDatabase.child("messages");
-    ArrayList<Goal> NameList = new ArrayList<Goal>();;
+    ArrayList<Goal> NameList = new ArrayList<>();;
     public void onCreate(Bundle saveInstanceState)
     {
         super.onCreate(saveInstanceState);
@@ -41,7 +41,7 @@ public class ShowGoalsListActivity extends AppCompatActivity {
 
         getNames();
         System.out.println(NameList.size());
-        arrayAdapter = new ArrayAdapter<Goal>(this,android.R.layout.simple_list_item_1, NameList);
+        arrayAdapter = new ArrayAdapter<>(this,android.R.layout.simple_list_item_1, NameList);
         animalList.setAdapter(arrayAdapter);
 
         animalList.setOnItemClickListener(new AdapterView.OnItemClickListener()
@@ -64,10 +64,6 @@ public class ShowGoalsListActivity extends AppCompatActivity {
         queryRef.addChildEventListener(new ChildEventListener() {
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                //Map data = (Map ) dataSnapshot.getValue();
-                //String timestamp = (String) data.get("name");
-                //NameList.add(timestamp);
-                //arrayAdapter.notifyDataSetChanged();
                 Goal goal = dataSnapshot.getValue(Goal.class);
                 NameList.add(goal);
                 arrayAdapter.notifyDataSetChanged();
