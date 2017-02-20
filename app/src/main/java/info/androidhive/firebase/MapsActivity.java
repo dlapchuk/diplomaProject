@@ -68,13 +68,13 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
     FirebaseDatabase database = FirebaseDatabase.getInstance();
     // myRef = database.getReference("message");
     DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference();
-    DatabaseReference locations = mDatabase.child("goals");
+    DatabaseReference goals = mDatabase.child("goals");
     float totalDistance = 0;
     boolean isFirstLocation = true;
     String loggingTime;
     final List <LatLng> coordList = new ArrayList<>();
     Map mGoals;
-    List mLocations;
+    LinkedList <LatLng> mLocations;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -176,8 +176,8 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
 
         PolylineOptions options = new PolylineOptions().width(5).color(Color.BLUE).geodesic(true);
         for (int i = 0; i < mLocations.size(); i++) {
-            double latitude = (double)((HashMap)(((HashMap)mLocations.get(i)).get("location"))).get("latitude");
-            double longitude = (double)((HashMap)(((HashMap)mLocations.get(i)).get("location"))).get("longitude");
+            double latitude = mLocations.get(i).latitude;
+            double longitude = mLocations.get(i).longitude;
             LatLng point = new LatLng(latitude, longitude);
             options.add(point);
         }
@@ -190,20 +190,18 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
         long diff = TimeUnit.SECONDS.toMinutes(endDate.getTime() - startDate.getTime());
         Goal goal = new Goal(totalDistance/diff, totalDistance, diff, startDate, endDate, "Daryna", mLocations);
 
-        locations.push().setValue(goal);
+        String key = goals.push().getKey();
+        goals.child(key).setValue(goal);
+        DatabaseReference locations = mDatabase.child("goals").child(key).child("locations");
+        for(LatLng latLng: mLocations){
+            locations.push().setValue(latLng);
+        }
+
+
     }
 
     private void saveCoordinate() {
-        Map mLocation = new HashMap();
-        //mLocation.put("timestamp", mLastUpdateTime);
-        Map mCoordinate = new HashMap();
-        mCoordinate.put("latitude", mLastLocation.latitude);
-        mCoordinate.put("longitude", mLastLocation.longitude);
-        mLocation.put("location", mCoordinate);
-        mLocations.add(mLocation);
-        //locations.push().setValue(mLocations);
-//        myRef.setValue(mLocations);
-        //myRef.setValue("Hello, World!");
+        mLocations.add(mLastLocation);
     }
 
     public static final int MY_PERMISSIONS_REQUEST_LOCATION = 99;
@@ -267,43 +265,6 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
         //drawPolyline();
     }
 
-    public void getRoadData(){
-        // Get only latest logged locations - since 'START' button clicked
-        Query queryRef =
-                locations.orderByChild("timestamp").startAt(loggingTime);
-        // Add listener for a child added at the data at this location
-        queryRef.addChildEventListener(new ChildEventListener() {
-            LatLngBounds bounds;
-            LatLngBounds.Builder builder = new LatLngBounds.Builder();
-            @Override
-            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                Map  data = (Map ) dataSnapshot.getValue();
-                String timestamp = (String) data.get("timestamp");
-                // Get recorded latitude and longitude
-                Map  mCoordinate = (HashMap)data.get("location");
-                double latitude = (double) (mCoordinate.get("latitude"));
-                double longitude = (double) (mCoordinate.get("longitude"));
-                // Create LatLng for each locations
-                LatLng mLatlng = new LatLng(latitude, longitude);
-                // Make sure the map boundary contains the location
-                builder.include(mLatlng);
-                bounds = builder.build();
-                coordList.add(mLatlng);
-                //Zoom map to the boundary that contains every logged location
-                mGoogleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds,
-                        18));
-            }
-            @Override
-            public void onChildRemoved(DataSnapshot dataSnapshot){
-            }
-            @Override
-            public void onCancelled(DatabaseError databaseError){}
-            @Override
-            public void onChildChanged(DataSnapshot dataSnapshot, String s1){}
-            @Override
-            public void onChildMoved(DataSnapshot dataSnapshot, String s2){}
-        });
-    }
 
 
     @Override

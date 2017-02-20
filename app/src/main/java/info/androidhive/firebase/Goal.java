@@ -1,8 +1,13 @@
 package info.androidhive.firebase;
 
+import com.google.android.gms.maps.model.LatLng;
+import com.google.firebase.database.GenericTypeIndicator;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -16,19 +21,20 @@ public class Goal  implements Serializable {
     private Date startDate;
     private Date endDate;
     private String name;
-    private List locations;
+    //GenericTypeIndicator <LinkedList<LatLng>> genericTypeIndicator = new GenericTypeIndicator<LinkedList<LatLng>>() {};
+    //private LinkedList <LatLng> locations;
 
     public Goal(){
     }
 
-    public Goal(double averageSpeed, float distance, long duration, Date startDate, Date endDate, String name, List locations) {
+    public Goal(double averageSpeed, float distance, long duration, Date startDate, Date endDate, String name, LinkedList locations) {
         this.averageSpeed = averageSpeed;
         this.distance = distance;
         this.duration = duration;
         this.startDate = startDate;
         this.endDate = endDate;
         this.name = name;
-        this.locations = locations;
+        //this.locations = (LinkedList<LatLng>)locations;
     }
 
     public double getAverageSpeed() {
@@ -79,11 +85,11 @@ public class Goal  implements Serializable {
         this.name = name;
     }
 
-    public List getLocations() {
-        return locations;
-    }
-
-    public void setLocations(List locations) {
-        this.locations = locations;
-    }
+//    public List getLocations() {
+//        return locations;
+//    }
+//
+//    public void setLocations(LinkedList<LatLng> locations) {
+//        this.locations = locations;
+//    }
 }

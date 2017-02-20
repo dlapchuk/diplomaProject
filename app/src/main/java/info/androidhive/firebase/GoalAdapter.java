@@ -24,17 +24,20 @@ public class GoalAdapter extends ArrayAdapter<Goal> {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         if (convertView == null) {
-            convertView = ((Activity) getContext()).getLayoutInflater().inflate(R.layout.item_message, parent, false);
+            convertView = ((Activity) getContext()).getLayoutInflater().inflate(R.layout.item_goal, parent, false);
         }
 
-        ImageView photoImageView = (ImageView) convertView.findViewById(R.id.photoImageView);
-        TextView messageTextView = (TextView) convertView.findViewById(R.id.messageTextView);
-        TextView authorTextView = (TextView) convertView.findViewById(R.id.nameTextView);
+        TextView speedTextView = (TextView) convertView.findViewById(R.id.speedTextView);
+        TextView distanceTextView = (TextView) convertView.findViewById(R.id.distanceTextView);
+        TextView durationTextView = (TextView) convertView.findViewById(R.id.durationTextView);
+        TextView nameTextView = (TextView) convertView.findViewById(R.id.nameTextView);
 
-        Goal message = getItem(position);
+        Goal goal = getItem(position);
 
-        authorTextView.setText(message.getName());
-        messageTextView.setText(Float.toString(message.getDuration()));
+        speedTextView.setText(Double.toString(goal.getAverageSpeed()));
+        distanceTextView.setText(Float.toString(goal.getDistance()));
+        durationTextView.setText(Long.toString(goal.getDuration()));
+        nameTextView.setText(goal.getName());
 
         return convertView;
     }
