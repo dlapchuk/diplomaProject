@@ -20,6 +20,7 @@ import com.google.firebase.remoteconfig.FirebaseRemoteConfig;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.LinkedList;
 
 
 public class ShowGoalsListActivity extends AppCompatActivity {
@@ -29,6 +30,9 @@ public class ShowGoalsListActivity extends AppCompatActivity {
     private ChildEventListener locChildEventListener;
     DatabaseReference goals = mDatabase.child("goals");
     ArrayList<Goal> NameList = new ArrayList<>();;
+
+    LinkedList<LinkedList> roads;
+
     public void onCreate(Bundle saveInstanceState)
     {
         super.onCreate(saveInstanceState);
@@ -45,8 +49,9 @@ public class ShowGoalsListActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> arg0, View v,int position, long arg3)
             {
                 Goal goal = NameList.get(position);
+                LinkedList<com.google.android.gms.maps.model.LatLng> road = roads.get(position);
                 Intent intent = new Intent(ShowGoalsListActivity.this, GoalActivity.class);
-                intent.putExtra("goal", (Serializable) goal);
+                intent.putExtra("road", road);
                 startActivity(intent);
                 //Toast.makeText(getApplicationContext(), "Animal Selected : "+goal,   Toast.LENGTH_LONG).show();
             }
@@ -54,15 +59,17 @@ public class ShowGoalsListActivity extends AppCompatActivity {
 
     }
 
-    void getLocations(String key){
+     LinkedList<com.google.android.gms.maps.model.LatLng> getLocations(String key){
         DatabaseReference locations = mDatabase.child("goals").child(key).child("locations");
-        if (locChildEventListener == null) {
+        final LinkedList<com.google.android.gms.maps.model.LatLng> locationsList = new LinkedList<>();
+
             locChildEventListener = new ChildEventListener() {
                 @Override
                 public void onChildAdded(DataSnapshot dataSnapshot, String s) {
                     LatLng loc = dataSnapshot.getValue(LatLng.class);
-                    String key = dataSnapshot.getKey();
-                    System.out.println(loc.getLatitude());
+                    com.google.android.gms.maps.model.LatLng latLng =
+                            new com.google.android.gms.maps.model.LatLng(loc.getLatitude(), loc.getLongitude());
+                    locationsList.add(latLng);
                 }
 
                 public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
@@ -70,20 +77,21 @@ public class ShowGoalsListActivity extends AppCompatActivity {
                 public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
                 public void onCancelled(DatabaseError databaseError) {}
             };
-            locations.addChildEventListener(locChildEventListener);
-        }
+
+        locations.addChildEventListener(locChildEventListener);
+        return locationsList;
     }
 
     void getNames()
     {
+        roads = new LinkedList<>();
         if (mChildEventListener == null) {
             mChildEventListener = new ChildEventListener() {
                 @Override
                 public void onChildAdded(DataSnapshot dataSnapshot, String s) {
                     Goal goal = dataSnapshot.getValue(Goal.class);
                     String key = dataSnapshot.getKey();
-                    System.out.println(goal.getName());
-                    getLocations(key);
+                    roads.add(getLocations(key));
                     goalAdapter.add(goal);
                 }
 
