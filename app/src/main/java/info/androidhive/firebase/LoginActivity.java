@@ -102,7 +102,7 @@ public class LoginActivity extends AppCompatActivity {
                                     }
                                 } else {
                                     //Intent intent = new Intent(LoginActivity.this, Accueil.class);
-                                    Intent intent = new Intent(LoginActivity.this, ChatActivity.class);
+                                    Intent intent = new Intent(LoginActivity.this, Accueil.class);
                                     startActivity(intent);
                                     finish();
                                 }

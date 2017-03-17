@@ -1,27 +1,38 @@
 package info.androidhive.firebase;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.UserProfileChangeRequest;
 
 public class SignupActivity extends AppCompatActivity {
 
-    private EditText inputEmail, inputPassword;
+    private EditText inputEmail, inputPassword, inputName, inputAge;
     private Button btnSignIn, btnSignUp, btnResetPassword;
     private ProgressBar progressBar;
     private FirebaseAuth auth;
+    Spinner inputGender = (Spinner)findViewById(R.id.gender);
+
+    private void saveUser(String id, String email, String name, int age, String gender){
+        User user = new User(id, email, name, age, gender);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,8 +46,14 @@ public class SignupActivity extends AppCompatActivity {
         btnSignUp = (Button) findViewById(R.id.sign_up_button);
         inputEmail = (EditText) findViewById(R.id.email);
         inputPassword = (EditText) findViewById(R.id.password);
+        inputName = (EditText) findViewById(R.id.name);
+        inputAge = (EditText) findViewById(R.id.age);
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
         btnResetPassword = (Button) findViewById(R.id.btn_reset_password);
+
+        String[] items = new String[]{"Male", "Female"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, items);
+        inputGender.setAdapter(adapter);
 
         btnResetPassword.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -44,6 +61,8 @@ public class SignupActivity extends AppCompatActivity {
                 startActivity(new Intent(SignupActivity.this, ResetPasswordActivity.class));
             }
         });
+
+
 
         btnSignIn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -55,9 +74,11 @@ public class SignupActivity extends AppCompatActivity {
         btnSignUp.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-                String email = inputEmail.getText().toString().trim();
-                String password = inputPassword.getText().toString().trim();
+                final String gender = inputGender.getSelectedItem().toString();
+                final String name = inputName.getText().toString();
+                final int age = Integer.valueOf(inputAge.getText().toString());
+                final String email = inputEmail.getText().toString().trim();
+                final String password = inputPassword.getText().toString().trim();
 
                 if (TextUtils.isEmpty(email)) {
                     Toast.makeText(getApplicationContext(), "Enter email address!", Toast.LENGTH_SHORT).show();
@@ -82,20 +103,35 @@ public class SignupActivity extends AppCompatActivity {
                             public void onComplete(@NonNull Task<AuthResult> task) {
                                 Toast.makeText(SignupActivity.this, "createUserWithEmail:onComplete:" + task.isSuccessful(), Toast.LENGTH_SHORT).show();
                                 progressBar.setVisibility(View.GONE);
-                                // If sign in fails, display a message to the user. If sign in succeeds
-                                // the auth state listener will be notified and logic to handle the
-                                // signed in user can be handled in the listener.
                                 if (!task.isSuccessful()) {
                                     Toast.makeText(SignupActivity.this, "Authentication failed." + task.getException(),
                                             Toast.LENGTH_SHORT).show();
                                 } else {
-                                    startActivity(new Intent(SignupActivity.this, MainActivity.class));
+                                    FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                                    saveUser(user.getProviderId(), email, name, age, gender);
+                                    UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
+                                            .setDisplayName(name)
+                                            .build();
+
+                                    user.updateProfile(profileUpdates)
+                                            .addOnCompleteListener(new OnCompleteListener<Void>() {
+                                                                       @Override
+                                                                       public void onComplete(@NonNull Task<Void> task) {
+                                                                           if (task.isSuccessful()) {
+                                                                               Log.d("add name", "User profile updated.");
+                                                                           }
+                                                                       }
+                                                                   });
+                                    auth.signOut();
+                                    startActivity(new Intent(SignupActivity.this, LoginActivity.class));
                                     finish();
                                 }
                             }
                         });
             }
         });
+
+
     }
 
     @Override

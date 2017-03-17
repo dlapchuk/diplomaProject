@@ -102,7 +102,7 @@ public class Accueil extends AppCompatActivity
             intent = new Intent(Accueil.this, ChatActivity.class);
             startActivity(intent);
         } else if (id == R.id.nav_manage) {
-            intent = new Intent(Accueil.this, MapsActivity.class);
+            intent = new Intent(Accueil.this, SettingsActivity.class);
             startActivity(intent);
 
         } else if (id == R.id.nav_share) {

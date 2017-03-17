@@ -71,12 +71,13 @@ public class ChatActivity extends AppCompatActivity {
     private FirebaseStorage mFirebaseStorage;
     private StorageReference mChatPhotosStorageReference;
     private FirebaseRemoteConfig mFirebaseRemoteConfig;
+    String key;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
-
+        key = getIntent().getExtras().getString("key");
         mUsername = ANONYMOUS;
 
         // Initialize Firebase components
@@ -85,8 +86,8 @@ public class ChatActivity extends AppCompatActivity {
         mFirebaseStorage = FirebaseStorage.getInstance();
         mFirebaseRemoteConfig = FirebaseRemoteConfig.getInstance();
 
-        mMessagesDatabaseReference = mFirebaseDatabase.getReference().child("messages");
-        mChatPhotosStorageReference = mFirebaseStorage.getReference().child("chat_photos");
+        mMessagesDatabaseReference = mFirebaseDatabase.getReference().child("goal").child(key).child("messages");
+        mChatPhotosStorageReference = mFirebaseStorage.getReference().child("goal").child(key).child("chat_photos");
 
         // Initialize references to views
         mProgressBar = (ProgressBar) findViewById(R.id.progressBar);

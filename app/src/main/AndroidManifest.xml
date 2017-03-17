@@ -73,7 +73,11 @@
         <activity
             android:name=".MapsActivity"
             android:label="@string/title_activity_maps" />
-        <activity android:name=".GoalActivity"></activity>
+        <activity android:name=".GoalActivity" />
+        <activity
+            android:name=".GoalMapActivity"
+            android:label="@string/title_activity_goal_map" />
+        <activity android:name=".SettingsActivity"></activity>
     </application>
 
 </manifest>

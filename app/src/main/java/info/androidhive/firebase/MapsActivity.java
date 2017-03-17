@@ -45,6 +45,8 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -56,7 +58,7 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
         LocationListener {
-    //String mLastUpdateTime;
+
     Polyline line;
     Date startDate;
     GoogleMap mGoogleMap;
@@ -66,7 +68,7 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
     LatLng mLastLocation;
     Marker mCurrLocationMarker;
     FirebaseDatabase database = FirebaseDatabase.getInstance();
-    // myRef = database.getReference("message");
+
     DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference();
     DatabaseReference goals = mDatabase.child("goals");
     float totalDistance = 0;
@@ -161,7 +163,6 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
         else{
             redrawLine();
         }
-        //lastLocation = location;
         System.out.println("\n\n\n"+latLng.latitude);
         System.out.println("\n\n\n"+latLng.longitude);
         //move map camera
@@ -186,9 +187,14 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
     }
 
     private void saveToFirebase(){
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        String name = "anonymous";
+        if (user != null) {
+            name = user.getProviderId();
+        }
         Date endDate = new Date();
         long diff = TimeUnit.SECONDS.toMinutes(endDate.getTime() - startDate.getTime());
-        Goal goal = new Goal(totalDistance/diff, totalDistance, diff, startDate, endDate, "Daryna", mLocations);
+        Goal goal = new Goal(totalDistance/diff, totalDistance, diff, startDate, endDate, name, mLocations);
 
         String key = goals.push().getKey();
         goals.child(key).setValue(goal);
@@ -196,8 +202,6 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
         for(LatLng latLng: mLocations){
             locations.push().setValue(latLng);
         }
-
-
     }
 
     private void saveCoordinate() {
@@ -214,9 +218,6 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                     android.Manifest.permission.ACCESS_FINE_LOCATION)) {
 
-                // Show an explanation to the user *asynchronously* -- don't block
-                // this thread waiting for the user's response! After the user
-                // sees the explanation, try again to request the permission.
                 new AlertDialog.Builder(this)
                         .setTitle("Location Permission Needed")
                         .setMessage("This app needs the Location permission, please accept to use location functionality")
@@ -261,8 +262,6 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
 
     public void drawLocations(View v) {
         saveToFirebase();
-        //getRoadData();
-        //drawPolyline();
     }
 
 
@@ -276,8 +275,6 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
-                    // permission was granted, yay! Do the
-                    // location-related task you need to do.
                     if (ContextCompat.checkSelfPermission(this,
                             android.Manifest.permission.ACCESS_FINE_LOCATION)
                             == PackageManager.PERMISSION_GRANTED) {
@@ -288,15 +285,11 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
                         mGoogleMap.setMyLocationEnabled(true);
                     }
                 } else {
-                    // permission denied, boo! Disable the
-                    // functionality that depends on this permission.
+
                     Toast.makeText(this, "permission denied", Toast.LENGTH_LONG).show();
                 }
 
             }
-
-            // other 'case' lines to check for other
-            // permissions this app might request
         }
     }
 }

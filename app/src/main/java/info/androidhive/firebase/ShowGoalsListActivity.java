@@ -7,18 +7,11 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-
-
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-
-import com.google.firebase.database.GenericTypeIndicator;
-import com.google.firebase.remoteconfig.FirebaseRemoteConfig;
-
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
@@ -50,10 +43,10 @@ public class ShowGoalsListActivity extends AppCompatActivity {
             {
                 Goal goal = NameList.get(position);
                 LinkedList<com.google.android.gms.maps.model.LatLng> road = roads.get(position);
-                Intent intent = new Intent(ShowGoalsListActivity.this, GoalActivity.class);
+                Intent intent = new Intent(ShowGoalsListActivity.this, GoalMapActivity.class);
                 intent.putExtra("road", road);
+                intent.putExtra("key", goal.getKey());
                 startActivity(intent);
-                //Toast.makeText(getApplicationContext(), "Animal Selected : "+goal,   Toast.LENGTH_LONG).show();
             }
         });
 
@@ -92,6 +85,7 @@ public class ShowGoalsListActivity extends AppCompatActivity {
                     Goal goal = dataSnapshot.getValue(Goal.class);
                     String key = dataSnapshot.getKey();
                     roads.add(getLocations(key));
+                    goal.setKey(key);
                     goalAdapter.add(goal);
                 }
 

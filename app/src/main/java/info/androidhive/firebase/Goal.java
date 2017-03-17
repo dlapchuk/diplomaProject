@@ -15,6 +15,7 @@ import java.util.List;
  */
 
 public class Goal  implements Serializable {
+    private String key;
     private double averageSpeed;
     private float distance;
     private long duration;
@@ -36,6 +37,10 @@ public class Goal  implements Serializable {
         this.name = name;
         //this.locations = (LinkedList<LatLng>)locations;
     }
+
+    public String getKey(){ return key; }
+
+    public void setKey(String key){ this.key = key; }
 
     public double getAverageSpeed() {
         return averageSpeed;
@@ -85,11 +90,4 @@ public class Goal  implements Serializable {
         this.name = name;
     }
 
-//    public List getLocations() {
-//        return locations;
-//    }
-//
-//    public void setLocations(LinkedList<LatLng> locations) {
-//        this.locations = locations;
-//    }
 }
