@@ -91,7 +91,7 @@
             android:textColorHint="@color/white">
 
             <EditText
-                android:id="@+id/country"
+                android:id="@+id/age"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="age"

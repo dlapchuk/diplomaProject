@@ -21,6 +21,8 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserProfileChangeRequest;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 public class SignupActivity extends AppCompatActivity {
 
@@ -28,10 +30,16 @@ public class SignupActivity extends AppCompatActivity {
     private Button btnSignIn, btnSignUp, btnResetPassword;
     private ProgressBar progressBar;
     private FirebaseAuth auth;
-    Spinner inputGender = (Spinner)findViewById(R.id.gender);
+    Spinner inputGender;
+    DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference();
 
     private void saveUser(String id, String email, String name, int age, String gender){
-        User user = new User(id, email, name, age, gender);
+        DatabaseReference users = mDatabase.child("users").child(id);
+        User user = new User(email, name, age, gender);
+        users.child("email").setValue(email);
+        users.child("name").setValue(name);
+        users.child("age").setValue(age);
+        users.child("gender").setValue(gender);
     }
 
     @Override
@@ -50,6 +58,7 @@ public class SignupActivity extends AppCompatActivity {
         inputAge = (EditText) findViewById(R.id.age);
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
         btnResetPassword = (Button) findViewById(R.id.btn_reset_password);
+        inputGender = (Spinner)findViewById(R.id.gender);
 
         String[] items = new String[]{"Male", "Female"};
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, items);
@@ -108,20 +117,20 @@ public class SignupActivity extends AppCompatActivity {
                                             Toast.LENGTH_SHORT).show();
                                 } else {
                                     FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                                    saveUser(user.getProviderId(), email, name, age, gender);
+                                    saveUser(user.getUid(), email, name, age, gender);
                                     UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
                                             .setDisplayName(name)
                                             .build();
 
                                     user.updateProfile(profileUpdates)
                                             .addOnCompleteListener(new OnCompleteListener<Void>() {
-                                                                       @Override
-                                                                       public void onComplete(@NonNull Task<Void> task) {
-                                                                           if (task.isSuccessful()) {
-                                                                               Log.d("add name", "User profile updated.");
-                                                                           }
-                                                                       }
-                                                                   });
+                                                @Override
+                                                public void onComplete(@NonNull Task<Void> task) {
+                                                    if (task.isSuccessful()) {
+                                                        Log.d("add name", "User profile updated.");
+                                                    }
+                                                }
+                                            });
                                     auth.signOut();
                                     startActivity(new Intent(SignupActivity.this, LoginActivity.class));
                                     finish();

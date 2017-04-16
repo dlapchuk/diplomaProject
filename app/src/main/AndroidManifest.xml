@@ -77,7 +77,11 @@
         <activity
             android:name=".GoalMapActivity"
             android:label="@string/title_activity_goal_map" />
-        <activity android:name=".SettingsActivity"></activity>
+        <activity android:name=".SettingsActivity" />
+        <activity android:name=".RatingActivity" />
+        <activity
+            android:name=".CycleRoadsActivity"
+            android:label="@string/title_activity_cycle_roads"></activity>
     </application>
 
 </manifest>

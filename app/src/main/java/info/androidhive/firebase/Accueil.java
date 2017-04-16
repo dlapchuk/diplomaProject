@@ -19,6 +19,7 @@ public class Accueil extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -99,7 +100,7 @@ public class Accueil extends AppCompatActivity
             intent = new Intent(Accueil.this, ShowGoalsListActivity.class);
             startActivity(intent);
         } else if (id == R.id.nav_slideshow) {
-            intent = new Intent(Accueil.this, ChatActivity.class);
+            intent = new Intent(Accueil.this, CycleRoadsActivity.class);
             startActivity(intent);
         } else if (id == R.id.nav_manage) {
             intent = new Intent(Accueil.this, SettingsActivity.class);

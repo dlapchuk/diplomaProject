@@ -54,6 +54,8 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.Query;
 
+import javax.xml.datatype.Duration;
+
 public class MapsActivity extends FragmentActivity implements  OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
@@ -68,7 +70,7 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
     LatLng mLastLocation;
     Marker mCurrLocationMarker;
     FirebaseDatabase database = FirebaseDatabase.getInstance();
-
+    LatLng prev = null;
     DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference();
     DatabaseReference goals = mDatabase.child("goals");
     float totalDistance = 0;
@@ -100,6 +102,8 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
     public void onMapReady(GoogleMap googleMap) {
         mGoogleMap=googleMap;
         mGoogleMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
+
+        saveMaps();
 
         //Initialize Google Play Services
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -141,7 +145,7 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
 
     @Override
     public void onLocationChanged(Location location) {
-
+        float [] results = new float[1];
         if (mCurrLocationMarker != null) {
             mCurrLocationMarker.remove();
         }
@@ -159,10 +163,16 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
         if(isFirstLocation){
             startDate = new Date();
             isFirstLocation = false;
+
         }
         else{
             redrawLine();
+            Location.distanceBetween(prev.latitude/ 1e6, prev.longitude/ 1e6,
+                    latLng.latitude/ 1e6, latLng.longitude/ 1e6, results);
+            totalDistance += results[0];
         }
+        prev = new LatLng(latLng.latitude, latLng.longitude);
+
         System.out.println("\n\n\n"+latLng.latitude);
         System.out.println("\n\n\n"+latLng.longitude);
         //move map camera
@@ -187,21 +197,76 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
     }
 
     private void saveToFirebase(){
+        boolean isFirst = true;
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         String name = "anonymous";
         if (user != null) {
-            name = user.getProviderId();
+            name = user.getUid();
         }
         Date endDate = new Date();
-        long diff = TimeUnit.SECONDS.toMinutes(endDate.getTime() - startDate.getTime());
+
+        long diff = (endDate.getTime() - startDate.getTime())/1000;
         Goal goal = new Goal(totalDistance/diff, totalDistance, diff, startDate, endDate, name, mLocations);
 
         String key = goals.push().getKey();
         goals.child(key).setValue(goal);
         DatabaseReference locations = mDatabase.child("goals").child(key).child("locations");
-        for(LatLng latLng: mLocations){
-            locations.push().setValue(latLng);
+
+        for(LatLng pos: mLocations){
+            locations.push().setValue(pos);
         }
+    }
+
+    private void saveMaps(){
+        /*DatabaseReference roads = mDatabase.child("roads");
+        LinkedList<LatLng> mLocationRoads = new LinkedList<>();
+        mLocationRoads.add(new LatLng(50.455448, 30.352098));
+        mLocationRoads.add(new LatLng(50.457225, 30.386935));
+        mLocationRoads.add(new LatLng(50.427392, 30.566915));
+        mLocationRoads.add(new LatLng(50.442280, 30.558851));
+        mLocationRoads.add(new LatLng(50.451380, 30.543030));
+        mLocationRoads.add(new LatLng(50.458269, 30.528230));
+        mLocationRoads.add(new LatLng(50.467755, 30.524658));
+        mLocationRoads.add(new LatLng(50.476006, 30.535069));
+        mLocationRoads.add(new LatLng(50.482111, 30.537723));
+        mLocationRoads.add(new LatLng(50.484514, 30.537212));
+        mLocationRoads.add(new LatLng(50.486463, 30.528638));
+        mLocationRoads.add(new LatLng(50.488411, 30.531701));
+        mLocationRoads.add(new LatLng(50.490814, 30.529353));
+        mLocationRoads.add(new LatLng(50.506007, 30.513022));
+        mLocationRoads.add(new LatLng(50.509966, 30.512511));
+        mLocationRoads.add(new LatLng(50.513212, 30.514042));
+        mLocationRoads.add(new LatLng(50.520828, 30.521995));
+        mLocationRoads.add(new LatLng(50.522719, 30.522541));
+        mLocationRoads.add(new LatLng(50.529124, 30.518475));
+        mLocationRoads.add(new LatLng(50.529278, 30.517504));
+        mLocationRoads.add(new LatLng(50.532094, 30.528368));
+        mLocationRoads.add(new LatLng(50.503925, 30.542861));
+        mLocationRoads.add(new LatLng(50.503563, 30.542401));
+        mLocationRoads.add(new LatLng(50.504500, 30.541557));
+        mLocationRoads.add(new LatLng(50.508197, 30.540535));
+        mLocationRoads.add(new LatLng(50.513157, 30.536226));
+        mLocationRoads.add(new LatLng(50.514768, 30.536303));
+        mLocationRoads.add(new LatLng(50.519231, 30.538622));
+        mLocationRoads.add(new LatLng(50.505538, 30.584182));
+        mLocationRoads.add(new LatLng(50.507864, 30.587283));
+        mLocationRoads.add(new LatLng(50.511921, 30.598893));
+        mLocationRoads.add(new LatLng(50.513999, 30.602676));
+        mLocationRoads.add(new LatLng(50.520409, 30.608545));
+        mLocationRoads.add(new LatLng(50.522032, 30.609232));
+        mLocationRoads.add(new LatLng(50.523456, 30.609429));
+        mLocationRoads.add(new LatLng(50.527045, 30.609888));
+
+        HashMap<String, String> road = new HashMap<>();
+        road.put("name", "Велодоріжка");
+        road.put("mark", "0");
+
+        String key = roads.push().getKey();
+        roads.child(key).setValue(road);
+        DatabaseReference roadLocations = roads.child(key).child("locations");
+        for(LatLng ltnLng: mLocationRoads){
+            roadLocations.push().setValue(ltnLng);
+        }*/
     }
 
     private void saveCoordinate() {

@@ -1,62 +1,112 @@
 package info.androidhive.firebase;
 
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.graphics.Color;
-import android.os.Build;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
-import android.view.View;
-import android.widget.Toast;
-import java.util.ArrayList;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationServices;
+
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import android.content.DialogInterface;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.os.Build;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
+import android.widget.Toast;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationServices;
+
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 
-public class GoalMapActivity extends FragmentActivity implements  OnMapReadyCallback,
+public class CycleRoadsActivity extends FragmentActivity implements  OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener{
     GoogleMap mGoogleMap;
     SupportMapFragment mapFrag;
     GoogleApiClient mGoogleApiClient;
-    ArrayList<LatLng> road;
-    String key;
+    DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference();
+    private ChildEventListener mChildEventListener;
+    private ChildEventListener locChildEventListener;
+    DatabaseReference roadDB = mDatabase.child("roads");
+    LinkedList<LinkedList> roads= new LinkedList<>();;
 
+    void getNames()
+    {
+        System.out.println("Here");
+        if (mChildEventListener == null) {
+            mChildEventListener = new ChildEventListener() {
+                @Override
+                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                    //HashMap road = dataSnapshot.getValue(HashMap.class);
+                    String key = dataSnapshot.getKey();
+                    getLocations(key);
+                    //roads.add(getLocations(key));
+                    //System.out.println(getLocations(key).size());
+                    //System.out.println(key);
+                }
 
-    public void getChat(View v){
-        Intent intent;
-        intent = new Intent(GoalMapActivity.this, ChatActivity.class);
-        intent.putExtra("key", key);
-        startActivity(intent);
+                public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
+                public void onChildRemoved(DataSnapshot dataSnapshot) {}
+                public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
+                public void onCancelled(DatabaseError databaseError) {}
+            };
+            roadDB.addChildEventListener(mChildEventListener);
+        }
     }
 
-    public void showMark(View v){
-        Intent intent;
-        intent = new Intent(GoalMapActivity.this, RatingActivity.class);
-        intent.putExtra("key", key);
-        startActivity(intent);
+    LinkedList<com.google.android.gms.maps.model.LatLng> getLocations(String key){
+        final DatabaseReference locations = mDatabase.child("roads").child(key).child("locations");
+        final LinkedList<com.google.android.gms.maps.model.LatLng> locationsList = new LinkedList<>();
+
+        locChildEventListener = new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                info.androidhive.firebase.LatLng loc = dataSnapshot.getValue(info.androidhive.firebase.LatLng.class);
+
+                com.google.android.gms.maps.model.LatLng latLng =
+                        new com.google.android.gms.maps.model.LatLng(loc.getLatitude(), loc.getLongitude());
+                locationsList.add(latLng);
+                int size = locationsList.size();
+                if(size > 1){
+                    Polyline line = mGoogleMap.addPolyline(new PolylineOptions()
+                            .add(locationsList.get(size -2), locationsList.get(size-1))
+                            .width(8)
+                            .color(Color.BLUE));
+                }
+            }
+
+            public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
+            public void onChildRemoved(DataSnapshot dataSnapshot) {}
+            public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
+            public void onCancelled(DatabaseError databaseError) {}
+        };
+
+        locations.addChildEventListener(locChildEventListener);
+        return locationsList;
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        road = (ArrayList< LatLng>)getIntent().getSerializableExtra("road");
-        key = getIntent().getExtras().getString("key");
-
-
+        //key = getIntent().getExtras().getString("key");
+        getNames();
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.activity_goal_map);
+        setContentView(R.layout.activity_cycle_roads);
         mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFrag.getMapAsync(this);
     }
@@ -88,15 +138,21 @@ public class GoalMapActivity extends FragmentActivity implements  OnMapReadyCall
             buildGoogleApiClient();
             mGoogleMap.setMyLocationEnabled(true);
         }
+        //System.out.println("GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG");
+        //System.out.println(roads.size());
+        for(int i = 0; i < roads.size(); i++){
+            PolylineOptions options = new PolylineOptions().width(20).color(Color.BLUE).geodesic(true);
+            LinkedList<com.google.android.gms.maps.model.LatLng> road = roads.get(i);
+            for (LatLng point: road) {
+                options.add(point);
+            }
 
-        PolylineOptions options = new PolylineOptions().width(5).color(Color.BLUE).geodesic(true);
-        for (LatLng point: road) {
-            options.add(point);
+            mGoogleMap.addPolyline(options); //add Polyline
+            //mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(road.get(0)));
+            //mGoogleMap.animateCamera(CameraUpdateFactory.zoomTo(16));
         }
 
-        mGoogleMap.addPolyline(options); //add Polyline
-        mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(road.get(0)));
-        mGoogleMap.animateCamera(CameraUpdateFactory.zoomTo(16));
+
     }
 
     protected synchronized void buildGoogleApiClient() {
@@ -136,7 +192,7 @@ public class GoalMapActivity extends FragmentActivity implements  OnMapReadyCall
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
                                 //Prompt the user once explanation has been shown
-                                ActivityCompat.requestPermissions(GoalMapActivity.this,
+                                ActivityCompat.requestPermissions(CycleRoadsActivity.this,
                                         new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
                                         MY_PERMISSIONS_REQUEST_LOCATION );
                             }

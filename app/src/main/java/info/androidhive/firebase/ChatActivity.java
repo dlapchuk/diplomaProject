@@ -61,6 +61,7 @@ public class ChatActivity extends AppCompatActivity {
     private Button mSendButton;
 
     private String mUsername;
+    private String id;
 
     // Firebase instance variables
     private FirebaseDatabase mFirebaseDatabase;
@@ -86,8 +87,8 @@ public class ChatActivity extends AppCompatActivity {
         mFirebaseStorage = FirebaseStorage.getInstance();
         mFirebaseRemoteConfig = FirebaseRemoteConfig.getInstance();
 
-        mMessagesDatabaseReference = mFirebaseDatabase.getReference().child("goal").child(key).child("messages");
-        mChatPhotosStorageReference = mFirebaseStorage.getReference().child("goal").child(key).child("chat_photos");
+        mMessagesDatabaseReference = mFirebaseDatabase.getReference().child("goals").child(key).child("messages");
+        mChatPhotosStorageReference = mFirebaseStorage.getReference().child("goals").child(key).child("chat_photos");
 
         // Initialize references to views
         mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
@@ -141,7 +142,7 @@ public class ChatActivity extends AppCompatActivity {
         mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                FriendlyMessage friendlyMessage = new FriendlyMessage(mMessageEditText.getText().toString(), mUsername, null);
+                FriendlyMessage friendlyMessage = new FriendlyMessage(mMessageEditText.getText().toString(), mUsername, null, id);
                 mMessagesDatabaseReference.push().setValue(friendlyMessage);
 
                 // Clear input box
@@ -155,7 +156,7 @@ public class ChatActivity extends AppCompatActivity {
                 FirebaseUser user = firebaseAuth.getCurrentUser();
                 if (user != null) {
                     // User is signed in
-                    onSignedInInitialize(user.getDisplayName());
+                    onSignedInInitialize(user.getDisplayName(), user.getUid());
                 } else {
                     // User is signed out
                     onSignedOutCleanup();
@@ -215,7 +216,7 @@ public class ChatActivity extends AppCompatActivity {
                             Uri downloadUrl = taskSnapshot.getDownloadUrl();
 
                             // Set the download URL to the message box, so that the user can send it to the database
-                            FriendlyMessage friendlyMessage = new FriendlyMessage(null, mUsername, downloadUrl.toString());
+                            FriendlyMessage friendlyMessage = new FriendlyMessage(null, mUsername, downloadUrl.toString(), id);
                             mMessagesDatabaseReference.push().setValue(friendlyMessage);
                         }
                     });
@@ -256,8 +257,9 @@ public class ChatActivity extends AppCompatActivity {
         }
     }
 
-    private void onSignedInInitialize(String username) {
+    private void onSignedInInitialize(String username, String id) {
         mUsername = username;
+        this.id = id;
         attachDatabaseReadListener();
     }
 
