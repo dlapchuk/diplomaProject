@@ -33,7 +33,6 @@ public class GoalMapActivity extends FragmentActivity implements  OnMapReadyCall
     ArrayList<LatLng> road;
     String key;
 
-
     public void getChat(View v){
         Intent intent;
         intent = new Intent(GoalMapActivity.this, ChatActivity.class);
@@ -52,10 +51,7 @@ public class GoalMapActivity extends FragmentActivity implements  OnMapReadyCall
     protected void onCreate(Bundle savedInstanceState) {
         road = (ArrayList< LatLng>)getIntent().getSerializableExtra("road");
         key = getIntent().getExtras().getString("key");
-
-
         super.onCreate(savedInstanceState);
-
         setContentView(R.layout.activity_goal_map);
         mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFrag.getMapAsync(this);
@@ -71,7 +67,6 @@ public class GoalMapActivity extends FragmentActivity implements  OnMapReadyCall
     public void onMapReady(GoogleMap googleMap) {
         mGoogleMap=googleMap;
         mGoogleMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
-
         //Initialize Google Play Services
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(this,

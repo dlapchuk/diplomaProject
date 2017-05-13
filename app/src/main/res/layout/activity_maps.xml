@@ -15,22 +15,22 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Draw"
+        android:text="Mark"
         android:id="@+id/button2"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
-        android:onClick="drawLocations"
+        android:onClick="markLocation"
 
         />
 
     <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Start"
-        android:id="@+id/button"
-        android:onClick="startTracking"
-        android:layout_alignParentBottom="true"
-        />
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="Start"
+    android:id="@+id/button"
+    android:onClick="startTracking"
+    android:layout_alignParentBottom="true"
+    />
 
     <Button
         android:text="STOP"

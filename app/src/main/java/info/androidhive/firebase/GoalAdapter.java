@@ -14,6 +14,9 @@ import com.firebase.ui.auth.AuthUI;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
+import java.sql.Date;
+import java.text.Format;
+import java.text.SimpleDateFormat;
 import java.util.List;
 
 /**
@@ -41,11 +44,13 @@ public class GoalAdapter extends ArrayAdapter<Goal> {
         TextView nameTextView = (TextView) convertView.findViewById(R.id.nameTextView);
 
         Goal goal = getItem(position);
-
-        speedTextView.setText(goal.getKey());
-        distanceTextView.setText(Float.toString(goal.getDistance()));
-        durationTextView.setText(Long.toString(goal.getDuration()));
-        nameTextView.setText(goal.getName());
+        Format formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String start = formatter.format(goal.getStartDate());
+        String end = formatter.format(goal.getEndDate());
+        speedTextView.setText(start + " - " + end);
+        distanceTextView.setText("distance: " + Float.toString(goal.getDistance()));
+        durationTextView.setText("duration: " + Long.toString(goal.getDuration()));
+        nameTextView.setText("speed: " + Double.toString(goal.getAverageSpeed()));
 
         return convertView;
     }

@@ -1,12 +1,16 @@
 package info.androidhive.firebase;
 
+import android.*;
+import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Build;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
@@ -15,7 +19,9 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.text.DateFormat;
@@ -29,6 +35,9 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
+import com.google.android.gms.appindexing.Thing;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
@@ -45,6 +54,7 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.ChildEventListener;
@@ -56,11 +66,11 @@ import com.google.firebase.database.Query;
 
 import javax.xml.datatype.Duration;
 
-public class MapsActivity extends FragmentActivity implements  OnMapReadyCallback,
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
         LocationListener {
-
+    private FirebaseAnalytics firebaseAnalytics;
     Polyline line;
     Date startDate;
     GoogleMap mGoogleMap;
@@ -70,23 +80,56 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
     LatLng mLastLocation;
     Marker mCurrLocationMarker;
     FirebaseDatabase database = FirebaseDatabase.getInstance();
-    LatLng prev = null;
+    Location prev = new Location("");
     DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference();
     DatabaseReference goals = mDatabase.child("goals");
     float totalDistance = 0;
     boolean isFirstLocation = true;
     String loggingTime;
-    final List <LatLng> coordList = new ArrayList<>();
+    final List<LatLng> coordList = new ArrayList<>();
     Map mGoals;
-    LinkedList <LatLng> mLocations;
+    LinkedList<LatLng> mLocations;
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    private GoogleApiClient client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if(user == null){
+            System.out.println("EVERYtHing goes to hell");
+        }
+        else{
+            System.out.println("EVERything IS FINE");
+            System.out.println();
+            System.out.println();
+        }
         super.onCreate(savedInstanceState);
-
+        firebaseAnalytics = FirebaseAnalytics.getInstance(this);
         setContentView(R.layout.activity_maps);
         mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFrag.getMapAsync(this);
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
+
+        Bundle bundle = new Bundle();
+        bundle.putInt(FirebaseAnalytics.Param.ITEM_ID, 910);
+        bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "New halfway");
+
+        //Logs an app event.
+        firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
+        
+
+        //Sets the Favourite Book property.
+        firebaseAnalytics.setUserProperty("FAVOURITE_BOOK", user.getDisplayName());
+        //Sets the Favourite Author property.
+        firebaseAnalytics.setUserProperty("FAVOURITE_AUTHOR",user.getEmail());
+
+        //Show a toast message
+        Toast.makeText(MapsActivity.this,"User Properties Added",Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -100,15 +143,13 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        mGoogleMap=googleMap;
+        mGoogleMap = googleMap;
         mGoogleMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
 
-        saveMaps();
-
         //Initialize Google Play Services
-        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(this,
-                    android.Manifest.permission.ACCESS_FINE_LOCATION)
+                    Manifest.permission.ACCESS_FINE_LOCATION)
                     == PackageManager.PERMISSION_GRANTED) {
                 //Location Permission already granted
                 buildGoogleApiClient();
@@ -138,14 +179,17 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
     }
 
     @Override
-    public void onConnectionSuspended(int i) {}
+    public void onConnectionSuspended(int i) {
+    }
 
     @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {}
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+    }
 
     @Override
     public void onLocationChanged(Location location) {
-        float [] results = new float[1];
+        mGoogleMap.setTrafficEnabled(true);
+        float[] results = new float[1];
         if (mCurrLocationMarker != null) {
             mCurrLocationMarker.remove();
         }
@@ -160,28 +204,28 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
         mCurrLocationMarker = mGoogleMap.addMarker(markerOptions);
         saveCoordinate();
-        if(isFirstLocation){
+        if (isFirstLocation) {
             startDate = new Date();
             isFirstLocation = false;
 
-        }
-        else{
+        } else {
             redrawLine();
-            Location.distanceBetween(prev.latitude/ 1e6, prev.longitude/ 1e6,
-                    latLng.latitude/ 1e6, latLng.longitude/ 1e6, results);
-            totalDistance += results[0];
+            Location temp = new Location("");
+            temp.setLatitude(latLng.latitude);
+            temp.setLongitude(latLng.longitude);
+            totalDistance += temp.distanceTo(prev);
         }
-        prev = new LatLng(latLng.latitude, latLng.longitude);
-
-        System.out.println("\n\n\n"+latLng.latitude);
-        System.out.println("\n\n\n"+latLng.longitude);
+        prev.setLatitude(latLng.latitude);
+        prev.setLongitude(latLng.longitude);
+        System.out.println("\n\n\n" + latLng.latitude);
+        System.out.println("\n\n\n" + latLng.longitude);
         //move map camera
         mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
         mGoogleMap.animateCamera(CameraUpdateFactory.zoomTo(18));
 
     }
 
-    private void redrawLine(){
+    private void redrawLine() {
 
         mGoogleMap.clear();  //clears all Markers and Polylines
 
@@ -196,7 +240,7 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
         line = mGoogleMap.addPolyline(options); //add Polyline
     }
 
-    private void saveToFirebase(){
+    private void saveToFirebase() {
         boolean isFirst = true;
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         String name = "anonymous";
@@ -205,68 +249,16 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
         }
         Date endDate = new Date();
 
-        long diff = (endDate.getTime() - startDate.getTime())/1000;
-        Goal goal = new Goal(totalDistance/diff, totalDistance, diff, startDate, endDate, name, mLocations);
+        long diff = (endDate.getTime() - startDate.getTime()) / 1000;
+        Goal goal = new Goal(totalDistance / diff, totalDistance, diff, startDate, endDate, name, mLocations);
 
         String key = goals.push().getKey();
         goals.child(key).setValue(goal);
         DatabaseReference locations = mDatabase.child("goals").child(key).child("locations");
 
-        for(LatLng pos: mLocations){
+        for (LatLng pos : mLocations) {
             locations.push().setValue(pos);
         }
-    }
-
-    private void saveMaps(){
-        /*DatabaseReference roads = mDatabase.child("roads");
-        LinkedList<LatLng> mLocationRoads = new LinkedList<>();
-        mLocationRoads.add(new LatLng(50.455448, 30.352098));
-        mLocationRoads.add(new LatLng(50.457225, 30.386935));
-        mLocationRoads.add(new LatLng(50.427392, 30.566915));
-        mLocationRoads.add(new LatLng(50.442280, 30.558851));
-        mLocationRoads.add(new LatLng(50.451380, 30.543030));
-        mLocationRoads.add(new LatLng(50.458269, 30.528230));
-        mLocationRoads.add(new LatLng(50.467755, 30.524658));
-        mLocationRoads.add(new LatLng(50.476006, 30.535069));
-        mLocationRoads.add(new LatLng(50.482111, 30.537723));
-        mLocationRoads.add(new LatLng(50.484514, 30.537212));
-        mLocationRoads.add(new LatLng(50.486463, 30.528638));
-        mLocationRoads.add(new LatLng(50.488411, 30.531701));
-        mLocationRoads.add(new LatLng(50.490814, 30.529353));
-        mLocationRoads.add(new LatLng(50.506007, 30.513022));
-        mLocationRoads.add(new LatLng(50.509966, 30.512511));
-        mLocationRoads.add(new LatLng(50.513212, 30.514042));
-        mLocationRoads.add(new LatLng(50.520828, 30.521995));
-        mLocationRoads.add(new LatLng(50.522719, 30.522541));
-        mLocationRoads.add(new LatLng(50.529124, 30.518475));
-        mLocationRoads.add(new LatLng(50.529278, 30.517504));
-        mLocationRoads.add(new LatLng(50.532094, 30.528368));
-        mLocationRoads.add(new LatLng(50.503925, 30.542861));
-        mLocationRoads.add(new LatLng(50.503563, 30.542401));
-        mLocationRoads.add(new LatLng(50.504500, 30.541557));
-        mLocationRoads.add(new LatLng(50.508197, 30.540535));
-        mLocationRoads.add(new LatLng(50.513157, 30.536226));
-        mLocationRoads.add(new LatLng(50.514768, 30.536303));
-        mLocationRoads.add(new LatLng(50.519231, 30.538622));
-        mLocationRoads.add(new LatLng(50.505538, 30.584182));
-        mLocationRoads.add(new LatLng(50.507864, 30.587283));
-        mLocationRoads.add(new LatLng(50.511921, 30.598893));
-        mLocationRoads.add(new LatLng(50.513999, 30.602676));
-        mLocationRoads.add(new LatLng(50.520409, 30.608545));
-        mLocationRoads.add(new LatLng(50.522032, 30.609232));
-        mLocationRoads.add(new LatLng(50.523456, 30.609429));
-        mLocationRoads.add(new LatLng(50.527045, 30.609888));
-
-        HashMap<String, String> road = new HashMap<>();
-        road.put("name", "Велодоріжка");
-        road.put("mark", "0");
-
-        String key = roads.push().getKey();
-        roads.child(key).setValue(road);
-        DatabaseReference roadLocations = roads.child(key).child("locations");
-        for(LatLng ltnLng: mLocationRoads){
-            roadLocations.push().setValue(ltnLng);
-        }*/
     }
 
     private void saveCoordinate() {
@@ -276,12 +268,12 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
     public static final int MY_PERMISSIONS_REQUEST_LOCATION = 99;
 
     private void checkLocationPermission() {
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
 
             // Should we show an explanation?
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    android.Manifest.permission.ACCESS_FINE_LOCATION)) {
+                    Manifest.permission.ACCESS_FINE_LOCATION)) {
 
                 new AlertDialog.Builder(this)
                         .setTitle("Location Permission Needed")
@@ -291,8 +283,8 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
                             public void onClick(DialogInterface dialogInterface, int i) {
                                 //Prompt the user once explanation has been shown
                                 ActivityCompat.requestPermissions(MapsActivity.this,
-                                        new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
-                                        MY_PERMISSIONS_REQUEST_LOCATION );
+                                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                                        MY_PERMISSIONS_REQUEST_LOCATION);
                             }
                         })
                         .create()
@@ -300,13 +292,13 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
             } else {
                 // No explanation needed, we can request the permission.
                 ActivityCompat.requestPermissions(this,
-                        new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
-                        MY_PERMISSIONS_REQUEST_LOCATION );
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                        MY_PERMISSIONS_REQUEST_LOCATION);
             }
         }
     }
 
-    public void startTracking(View v){
+    public void startTracking(View v) {
         mGoals = new HashMap();
         mLocations = new LinkedList();
         mLocationRequest = new LocationRequest();
@@ -314,21 +306,62 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
         mLocationRequest.setFastestInterval(1000);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
         if (ContextCompat.checkSelfPermission(this,
-                android.Manifest.permission.ACCESS_FINE_LOCATION)
+                Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
         }
     }
 
-    public void stopTracking(View v){
+    public void stopTracking(View v) {
         LocationServices.FusedLocationApi.removeLocationUpdates(
+
                 mGoogleApiClient, this);
-    }
-
-    public void drawLocations(View v) {
         saveToFirebase();
+        Intent intent = new Intent(MapsActivity.this, ShowGoalsListActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(intent);
+        finish();
     }
 
+    public void markLocation(View v){
+        AlertDialog.Builder mBuilder = new AlertDialog.Builder(MapsActivity.this);
+        View mView = getLayoutInflater().inflate(R.layout.dialog_spinner, null);
+        mBuilder.setTitle("Spinner in custom dialog");
+        final Spinner mSpinner = (Spinner) mView.findViewById(R.id.spinner);
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(MapsActivity.this,
+                android.R.layout.simple_spinner_item,
+                getResources().getStringArray(R.array.markList));
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_item);
+        mSpinner.setAdapter(adapter);
+        mBuilder.setPositiveButton("Ok",
+
+                new DialogInterface.OnClickListener() {
+
+                    public void onClick(DialogInterface dialog, int i) {
+                        Toast.makeText(MapsActivity.this,
+                                mSpinner.getSelectedItem().toString(),
+                                Toast.LENGTH_SHORT)
+                                .show();
+
+                        dialog.dismiss();
+                    }
+                });
+        mBuilder.setNegativeButton("Dismiss",
+
+                new DialogInterface.OnClickListener() {
+
+                    public void onClick(DialogInterface dialog, int i) {
+                        dialog.dismiss();
+                    }
+                });
+        mBuilder.setView(mView);
+        AlertDialog dialog = mBuilder.create();
+        dialog.show();
+        System.out.println("start");
+        mGoogleMap.addMarker(new MarkerOptions().position(mLastLocation)
+                .title("Marker in Sydney"));
+        System.out.println("end");
+    }
 
 
     @Override
@@ -341,7 +374,7 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
                     if (ContextCompat.checkSelfPermission(this,
-                            android.Manifest.permission.ACCESS_FINE_LOCATION)
+                            Manifest.permission.ACCESS_FINE_LOCATION)
                             == PackageManager.PERMISSION_GRANTED) {
 
                         if (mGoogleApiClient == null) {
@@ -356,5 +389,41 @@ public class MapsActivity extends FragmentActivity implements  OnMapReadyCallbac
 
             }
         }
+    }
+
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    public Action getIndexApiAction() {
+        Thing object = new Thing.Builder()
+                .setName("Maps Page") // TODO: Define a title for the content shown.
+                // TODO: Make sure this auto-generated URL is correct.
+                .setUrl(Uri.parse("http://[ENTER-YOUR-URL-HERE]"))
+                .build();
+        return new Action.Builder(Action.TYPE_VIEW)
+                .setObject(object)
+                .setActionStatus(Action.STATUS_TYPE_COMPLETED)
+                .build();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client.connect();
+        AppIndex.AppIndexApi.start(client, getIndexApiAction());
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        AppIndex.AppIndexApi.end(client, getIndexApiAction());
+        client.disconnect();
     }
 }

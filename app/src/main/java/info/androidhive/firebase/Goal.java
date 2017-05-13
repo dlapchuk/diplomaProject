@@ -23,7 +23,6 @@ public class Goal  implements Serializable {
     private Date endDate;
     private String name;
     //GenericTypeIndicator <LinkedList<LatLng>> genericTypeIndicator = new GenericTypeIndicator<LinkedList<LatLng>>() {};
-    //private LinkedList <LatLng> locations;
 
     public Goal(){
     }
