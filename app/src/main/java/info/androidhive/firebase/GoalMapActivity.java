@@ -32,6 +32,7 @@ public class GoalMapActivity extends FragmentActivity implements  OnMapReadyCall
     GoogleApiClient mGoogleApiClient;
     ArrayList<LatLng> road;
     String key;
+    int marks, countMarks;
 
     public void getChat(View v){
         Intent intent;
@@ -44,6 +45,8 @@ public class GoalMapActivity extends FragmentActivity implements  OnMapReadyCall
         Intent intent;
         intent = new Intent(GoalMapActivity.this, RatingActivity.class);
         intent.putExtra("key", key);
+        intent.putExtra("marks", marks);
+        intent.putExtra("countMarks", countMarks);
         startActivity(intent);
     }
 
@@ -51,6 +54,8 @@ public class GoalMapActivity extends FragmentActivity implements  OnMapReadyCall
     protected void onCreate(Bundle savedInstanceState) {
         road = (ArrayList< LatLng>)getIntent().getSerializableExtra("road");
         key = getIntent().getExtras().getString("key");
+        marks = getIntent().getExtras().getInt("marks");
+        countMarks = getIntent().getExtras().getInt("countMarks");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_goal_map);
         mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
@@ -92,6 +97,8 @@ public class GoalMapActivity extends FragmentActivity implements  OnMapReadyCall
         mGoogleMap.addPolyline(options); //add Polyline
         mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(road.get(0)));
         mGoogleMap.animateCamera(CameraUpdateFactory.zoomTo(16));
+
+
     }
 
     protected synchronized void buildGoogleApiClient() {

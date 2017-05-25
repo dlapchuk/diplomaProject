@@ -43,7 +43,8 @@ public class CycleRoadsActivity extends FragmentActivity implements  OnMapReadyC
     private ChildEventListener mChildEventListener;
     private ChildEventListener locChildEventListener;
     DatabaseReference roadDB = mDatabase.child("roads");
-    LinkedList<LinkedList> roads= new LinkedList<>();;
+    LinkedList<LinkedList> roads= new LinkedList<>();
+
 
     void getNames()
     {
@@ -52,12 +53,9 @@ public class CycleRoadsActivity extends FragmentActivity implements  OnMapReadyC
             mChildEventListener = new ChildEventListener() {
                 @Override
                 public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                    //HashMap road = dataSnapshot.getValue(HashMap.class);
                     String key = dataSnapshot.getKey();
                     getLocations(key);
-                    //roads.add(getLocations(key));
-                    //System.out.println(getLocations(key).size());
-                    //System.out.println(key);
+
                 }
 
                 public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
@@ -146,10 +144,7 @@ public class CycleRoadsActivity extends FragmentActivity implements  OnMapReadyC
             for (LatLng point: road) {
                 options.add(point);
             }
-
             mGoogleMap.addPolyline(options); //add Polyline
-            //mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(road.get(0)));
-            //mGoogleMap.animateCamera(CameraUpdateFactory.zoomTo(16));
         }
 
 

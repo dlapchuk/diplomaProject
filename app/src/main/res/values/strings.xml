@@ -117,4 +117,6 @@
 
     <string name="pref_title_vibrate">Vibrate</string>
     <string name="title_activity_cycle_roads">Map</string>
+    <string name="title_activity_show_road_list">ShowRoadListActivity</string>
+    <string name="title_activity_all_roads">Map</string>
 </resources>

@@ -87,8 +87,8 @@ public class ChatActivity extends AppCompatActivity {
         mFirebaseStorage = FirebaseStorage.getInstance();
         mFirebaseRemoteConfig = FirebaseRemoteConfig.getInstance();
 
-        mMessagesDatabaseReference = mFirebaseDatabase.getReference().child("goals").child(key).child("messages");
-        mChatPhotosStorageReference = mFirebaseStorage.getReference().child("goals").child(key).child("chat_photos");
+        mMessagesDatabaseReference = mFirebaseDatabase.getReference().child("roads").child(key).child("messages");
+        mChatPhotosStorageReference = mFirebaseStorage.getReference().child("roads").child(key).child("chat_photos");
 
         // Initialize references to views
         mProgressBar = (ProgressBar) findViewById(R.id.progressBar);

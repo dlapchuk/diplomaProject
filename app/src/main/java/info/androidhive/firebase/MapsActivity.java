@@ -12,6 +12,8 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
+import android.os.SystemClock;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -70,7 +72,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
         LocationListener {
-    private FirebaseAnalytics firebaseAnalytics;
+
     Polyline line;
     Date startDate;
     GoogleMap mGoogleMap;
@@ -89,47 +91,44 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     final List<LatLng> coordList = new ArrayList<>();
     Map mGoals;
     LinkedList<LatLng> mLocations;
-    /**
-     * ATTENTION: This was auto-generated to implement the App Indexing API.
-     * See https://g.co/AppIndexing/AndroidStudio for more information.
-     */
+    DatabaseReference roadDB = mDatabase.child("roads");
+    DatabaseReference markDB = mDatabase.child("marks");
+    LinkedList<LinkedList> roads= new LinkedList<>();
+    private ChildEventListener mChildEventListener;
+    private ChildEventListener locChildEventListener;
+    private ChildEventListener mDangerEventListener, mShopEventListener, mStationEventListener;
+    private LinkedList <LatLng> dangerous, shops, stations;
+    private FirebaseAnalytics firebaseAnalytics;
+    Button startButton, stopButton;
+    TextView stopwatch;
+    long MillisecondTime, StartTime, TimeBuff, UpdateTime = 0L;
+    Handler handler;
+    int Seconds, Minutes, MilliSeconds;
+
     private GoogleApiClient client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if(user == null){
-            System.out.println("EVERYtHing goes to hell");
-        }
-        else{
-            System.out.println("EVERything IS FINE");
-            System.out.println();
-            System.out.println();
-        }
+        getNames();
+        dangerous = new LinkedList<>();
+        shops = new LinkedList<>();
+        stations = new LinkedList<>();
+        getDangerMarks();
+        getShopMarks();
+        getStationMarks();
         super.onCreate(savedInstanceState);
         firebaseAnalytics = FirebaseAnalytics.getInstance(this);
         setContentView(R.layout.activity_maps);
         mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFrag.getMapAsync(this);
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        startButton=(Button)findViewById(R.id.button);
+        stopButton = (Button)findViewById(R.id.stopButton);
+        stopwatch = (TextView) findViewById(R.id.stopwatch);
+        stopwatch.setText("00:00:00");
+        stopButton.setVisibility(View.INVISIBLE);
+        handler = new Handler();
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
-
-        Bundle bundle = new Bundle();
-        bundle.putInt(FirebaseAnalytics.Param.ITEM_ID, 910);
-        bundle.putString(FirebaseAnalytics.Param.ITEM_NAME, "New halfway");
-
-        //Logs an app event.
-        firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle);
-        
-
-        //Sets the Favourite Book property.
-        firebaseAnalytics.setUserProperty("FAVOURITE_BOOK", user.getDisplayName());
-        //Sets the Favourite Author property.
-        firebaseAnalytics.setUserProperty("FAVOURITE_AUTHOR",user.getEmail());
-
-        //Show a toast message
-        Toast.makeText(MapsActivity.this,"User Properties Added",Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -162,6 +161,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             buildGoogleApiClient();
             mGoogleMap.setMyLocationEnabled(true);
         }
+
+        for(int i = 0; i < roads.size(); i++){
+            PolylineOptions options = new PolylineOptions().width(20).color(Color.BLUE).geodesic(true);
+            LinkedList<com.google.android.gms.maps.model.LatLng> road = roads.get(i);
+            for (LatLng point: road) {
+                 options.add(point);
+            }
+            mGoogleMap.addPolyline(options); //add Polyline
+        }
+
+        LatLng latLng = new LatLng(50.4501, 30.5234);
+        mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+        mGoogleMap.animateCamera(CameraUpdateFactory.zoomTo(10));
     }
 
     protected synchronized void buildGoogleApiClient() {
@@ -192,6 +204,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         float[] results = new float[1];
         if (mCurrLocationMarker != null) {
             mCurrLocationMarker.remove();
+        }
+
+        for(int i = 0; i < dangerous.size(); i++){
+            mGoogleMap.addMarker(new MarkerOptions().position(dangerous.get(i))
+                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.danger)));
+        }
+        for(int i = 0; i < shops.size(); i++){
+            mGoogleMap.addMarker(new MarkerOptions().position(shops.get(i))
+                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.shop)));
+        }
+        for(int i = 0; i < stations.size(); i++){
+            mGoogleMap.addMarker(new MarkerOptions().position(stations.get(i))
+                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.velostation)));
         }
 
         //Place current location marker
@@ -225,11 +250,121 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
+    void getNames()
+    {
+        if (mChildEventListener == null) {
+            mChildEventListener = new ChildEventListener() {
+                @Override
+                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                    String key = dataSnapshot.getKey();
+                    getLocations(key);
+                }
+                public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
+                public void onChildRemoved(DataSnapshot dataSnapshot) {}
+                public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
+                public void onCancelled(DatabaseError databaseError) {}
+            };
+            roadDB.addChildEventListener(mChildEventListener);
+        }
+    }
+
+    void getDangerMarks()
+    {
+        if (mDangerEventListener == null) {
+            mDangerEventListener = new ChildEventListener() {
+                @Override
+                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                    info.androidhive.firebase.LatLng loc = dataSnapshot.getValue(info.androidhive.firebase.LatLng.class);
+
+                    com.google.android.gms.maps.model.LatLng latLng =
+                            new com.google.android.gms.maps.model.LatLng(loc.getLatitude(), loc.getLongitude());
+                    dangerous.add(latLng);
+                }
+                public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
+                public void onChildRemoved(DataSnapshot dataSnapshot) {}
+                public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
+                public void onCancelled(DatabaseError databaseError) {}
+            };
+            markDB.child("danger").addChildEventListener(mDangerEventListener);
+        }
+    }
+
+    void getShopMarks()
+    {
+        if (mShopEventListener == null) {
+            mShopEventListener = new ChildEventListener() {
+                @Override
+                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                    info.androidhive.firebase.LatLng loc = dataSnapshot.getValue(info.androidhive.firebase.LatLng.class);
+
+                    com.google.android.gms.maps.model.LatLng latLng =
+                            new com.google.android.gms.maps.model.LatLng(loc.getLatitude(), loc.getLongitude());
+                    shops.add(latLng);
+                }
+                public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
+                public void onChildRemoved(DataSnapshot dataSnapshot) {}
+                public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
+                public void onCancelled(DatabaseError databaseError) {}
+            };
+            markDB.child("shop").addChildEventListener(mShopEventListener);
+        }
+    }
+
+    void getStationMarks()
+    {
+        if (mStationEventListener == null) {
+            mStationEventListener = new ChildEventListener() {
+                @Override
+                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                    info.androidhive.firebase.LatLng loc = dataSnapshot.getValue(info.androidhive.firebase.LatLng.class);
+
+                    com.google.android.gms.maps.model.LatLng latLng =
+                            new com.google.android.gms.maps.model.LatLng(loc.getLatitude(), loc.getLongitude());
+                    stations.add(latLng);
+                }
+                public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
+                public void onChildRemoved(DataSnapshot dataSnapshot) {}
+                public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
+                public void onCancelled(DatabaseError databaseError) {}
+            };
+            markDB.child("station").addChildEventListener(mStationEventListener);
+        }
+    }
+
+    LinkedList<com.google.android.gms.maps.model.LatLng> getLocations(String key){
+        final DatabaseReference locations = mDatabase.child("roads").child(key).child("locations");
+        final LinkedList<com.google.android.gms.maps.model.LatLng> locationsList = new LinkedList<>();
+
+        locChildEventListener = new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                info.androidhive.firebase.LatLng loc = dataSnapshot.getValue(info.androidhive.firebase.LatLng.class);
+
+                com.google.android.gms.maps.model.LatLng latLng =
+                        new com.google.android.gms.maps.model.LatLng(loc.getLatitude(), loc.getLongitude());
+                locationsList.add(latLng);
+                int size = locationsList.size();
+                if(size > 1){
+                    Polyline line = mGoogleMap.addPolyline(new PolylineOptions()
+                            .add(locationsList.get(size -2), locationsList.get(size-1))
+                            .width(8)
+                            .color(Color.BLUE));
+                }
+            }
+
+            public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
+            public void onChildRemoved(DataSnapshot dataSnapshot) {}
+            public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
+            public void onCancelled(DatabaseError databaseError) {}
+        };
+
+        locations.addChildEventListener(locChildEventListener);
+        return locationsList;
+    }
+
     private void redrawLine() {
-
-        mGoogleMap.clear();  //clears all Markers and Polylines
-
-        PolylineOptions options = new PolylineOptions().width(5).color(Color.BLUE).geodesic(true);
+        //mGoogleMap.clear();  //clears all Markers and Polylines
+        PolylineOptions options = new PolylineOptions().width(5).color(Color.RED).geodesic(true);
         for (int i = 0; i < mLocations.size(); i++) {
             double latitude = mLocations.get(i).latitude;
             double longitude = mLocations.get(i).longitude;
@@ -259,6 +394,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         for (LatLng pos : mLocations) {
             locations.push().setValue(pos);
         }
+        startButton.setVisibility(View.VISIBLE);
+        stopButton.setVisibility(View.INVISIBLE);
     }
 
     private void saveCoordinate() {
@@ -310,7 +447,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 == PackageManager.PERMISSION_GRANTED) {
             LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
         }
+        startButton.setVisibility(View.INVISIBLE);
+        stopButton.setVisibility(View.VISIBLE);
+        StartTime = SystemClock.uptimeMillis();
+        handler.postDelayed(runnable, 0);
     }
+
+    public Runnable runnable = new Runnable() {
+
+        public void run() {
+
+            MillisecondTime = SystemClock.uptimeMillis() - StartTime;
+
+            UpdateTime = TimeBuff + MillisecondTime;
+
+            Seconds = (int) (UpdateTime / 1000);
+
+            Minutes = Seconds / 60;
+
+            Seconds = Seconds % 60;
+
+            MilliSeconds = (int) (UpdateTime % 1000);
+
+            stopwatch.setText("" + Minutes + ":"
+                    + String.format("%02d", Seconds) + ":"
+                    + String.format("%03d", MilliSeconds));
+
+            handler.postDelayed(this, 0);
+        }
+
+    };
 
     public void stopTracking(View v) {
         LocationServices.FusedLocationApi.removeLocationUpdates(
@@ -319,6 +485,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         saveToFirebase();
         Intent intent = new Intent(MapsActivity.this, ShowGoalsListActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        MillisecondTime = 0L;
+        StartTime = 0L;
+        TimeBuff = 0L;
+        UpdateTime = 0L;
+        Seconds = 0;
+        Minutes = 0;
+        MilliSeconds = 0;
+        stopwatch.setText("00:00:00");
         startActivity(intent);
         finish();
     }
@@ -342,6 +516,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 mSpinner.getSelectedItem().toString(),
                                 Toast.LENGTH_SHORT)
                                 .show();
+                        switch (mSpinner.getSelectedItem().toString()){
+                            case "danger":
+                                mGoogleMap.addMarker(new MarkerOptions().position(mLastLocation)
+                                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.danger)));
+                                saveMarkToDB("danger");
+                                break;
+                            case "shop":
+                                mGoogleMap.addMarker(new MarkerOptions().position(mLastLocation)
+                                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.shop)));
+                                saveMarkToDB("shop");
+                                break;
+                            case "station":
+                                mGoogleMap.addMarker(new MarkerOptions().position(mLastLocation)
+                                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.velostation)));
+                                saveMarkToDB("station");
+                                break;
+
+                        }
 
                         dialog.dismiss();
                     }
@@ -357,10 +549,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mBuilder.setView(mView);
         AlertDialog dialog = mBuilder.create();
         dialog.show();
-        System.out.println("start");
-        mGoogleMap.addMarker(new MarkerOptions().position(mLastLocation)
-                .title("Marker in Sydney"));
-        System.out.println("end");
+    }
+
+    public void saveMarkToDB(String type){
+        String key = goals.push().getKey();
+        markDB.child(type).child(key).setValue(mLastLocation);
     }
 
 

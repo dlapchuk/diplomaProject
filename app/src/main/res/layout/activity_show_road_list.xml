@@ -6,18 +6,10 @@
     android:orientation="vertical"
     android:weightSum="1">
 
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="224dp"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:id="@+id/calendar1"
-        android:layout_weight="0.82" />
-
     <ListView
-        android:id="@+id/listViewAnimals"
+        android:id="@+id/listViewRoads"
         android:layout_width="fill_parent"
-        android:layout_height="264dp"
+        android:layout_height="match_parent"
         android:divider="@color/caldroid_transparent"
         android:dividerHeight="8dp">
     </ListView>

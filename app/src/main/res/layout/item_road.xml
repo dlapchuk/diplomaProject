@@ -10,7 +10,7 @@
 
 
     <TextView
-        android:id="@+id/speedTextView"
+        android:id="@+id/nameTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_weight="0"
@@ -18,34 +18,14 @@
         android:shadowColor="@color/caldroid_light_red"
         android:shadowRadius="2."
         android:textAppearance="?android:attr/textAppearanceLarge"
-        tools:text="Speed" />
-
-    <TextView
-        android:id="@+id/distanceTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_weight="0"
-        android:textColor="@color/buttonTextColor"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        tools:text="Distance" />
-
-    <TextView
-        android:id="@+id/durationTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_weight="0"
-        android:textColor="@color/buttonTextColor"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        tools:text="Duration" />
-
-    <TextView
-        android:id="@+id/nameTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_weight="0"
-        android:textColor="@color/buttonTextColor"
-        android:textAppearance="?android:attr/textAppearanceSmall"
         tools:text="Name" />
 
-
+    <TextView
+        android:id="@+id/markTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="0"
+        android:textColor="@color/buttonTextColor"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        tools:text="Mark" />
 </LinearLayout>

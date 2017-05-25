@@ -17,6 +17,7 @@ import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -32,6 +33,7 @@ public class SignupActivity extends AppCompatActivity {
     private FirebaseAuth auth;
     Spinner inputGender;
     DatabaseReference mDatabase = FirebaseDatabase.getInstance().getReference();
+    private FirebaseAnalytics firebaseAnalytics;
 
     private void saveUser(String id, String email, String name, int age, String gender){
         DatabaseReference users = mDatabase.child("users").child(id);
@@ -40,13 +42,18 @@ public class SignupActivity extends AppCompatActivity {
         users.child("name").setValue(name);
         users.child("age").setValue(age);
         users.child("gender").setValue(gender);
+        //Sets the Favourite Book property.
+        firebaseAnalytics.setUserProperty("gender", gender);
+        firebaseAnalytics.setUserProperty("age", Integer.toString(age));
+        //Show a toast message
+        Toast.makeText(SignupActivity.this,"User Properties Added",Toast.LENGTH_SHORT).show();
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_signup);
-
+        firebaseAnalytics = FirebaseAnalytics.getInstance(this);
         //Get Firebase auth instance
         auth = FirebaseAuth.getInstance();
 
