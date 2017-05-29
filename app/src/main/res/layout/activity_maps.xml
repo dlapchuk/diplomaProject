@@ -50,7 +50,7 @@
 
     <ImageView
         android:id="@+id/rectimage"
-        android:layout_height="50dp"
+        android:layout_height="100dp"
         android:layout_width="150dp"
         android:src="@drawable/rectangle"
         android:layout_alignParentTop="true"
@@ -64,8 +64,34 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/stopwatch"
-        android:layout_alignBottom="@+id/rectimage"
+        android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true" />
+
+    <Switch
+        android:text="Show traffic"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/trafficSwitch"
+        android:layout_below="@+id/stopwatch"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginLeft="12dp"
+        android:layout_marginStart="12dp" />
+
+    <Switch
+        android:text=""
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/mapTypeSwitch"
+        android:layout_alignBottom="@+id/rectimage"
+        android:layout_alignLeft="@+id/trafficSwitch"
+        android:layout_alignStart="@+id/trafficSwitch"
+        android:textOff="Satelight"
+        android:layout_marginTop="55dp"
+        android:textOn="Hybrid"
+        android:showText="true"
+        android:layout_alignRight="@+id/rectimage"
+        android:layout_alignEnd="@+id/rectimage" />
 
 </RelativeLayout>

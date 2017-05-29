@@ -111,15 +111,18 @@ public class BigQueryConnector {
 
     private static void displayResults(List<TableRow> rows) {
         System.out.print("\nResults:\n------------\n");
-        for (TableRow row : rows) {
-            for (TableCell field : row.getF()) {
-                System.out.printf("%-50s", field.getV());
+        if(rows.size() != 0){
+            for (TableRow row : rows) {
+                for (TableCell field : row.getF()) {
+                    System.out.printf("%-50s", field.getV());
+                }
+                System.out.println();
             }
-            System.out.println();
         }
+
     }
 
-    public void start_bigquery() throws IOException {
+    public List<TableRow> start_bigquery() throws IOException {
 
         String projectId = "ukrbikeapp";
 
@@ -138,6 +141,7 @@ public class BigQueryConnector {
 //                bigquery,
 //                projectId);
 
-        displayResults(rows);
+        //displayResults(rows);
+        return rows;
     }
 }

@@ -125,6 +125,8 @@ public class SignupActivity extends AppCompatActivity {
                                 } else {
                                     FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
                                     saveUser(user.getUid(), email, name, age, gender);
+
+                                    firebaseAnalytics.setUserId(user.getUid());
                                     UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
                                             .setDisplayName(name)
                                             .build();

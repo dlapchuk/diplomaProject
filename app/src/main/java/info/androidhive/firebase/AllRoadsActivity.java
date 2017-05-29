@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
@@ -24,8 +25,11 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
+import android.widget.SpinnerAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -56,6 +60,8 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.api.services.bigquery.model.TableCell;
+import com.google.api.services.bigquery.model.TableRow;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -86,18 +92,22 @@ public class AllRoadsActivity extends FragmentActivity implements OnMapReadyCall
     LinkedList<LinkedList> roads= new LinkedList<>();
     private ChildEventListener mChildEventListener;
     private ChildEventListener locChildEventListener;
+    String age = "any", day = "any", time = "any", season = "any";
+    Spinner mSpinnerAge, mSpinnerDay, mSpinnerSeason, mSpinnerTime;
 
     private GoogleApiClient client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        getNames();
+        //getNames();
+        //executeQuery("evening", "young", "spring");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_all_roads);
         mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFrag.getMapAsync(this);
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
+        executeQuery(time, age, season);
     }
 
     @Override
@@ -164,6 +174,171 @@ public class AllRoadsActivity extends FragmentActivity implements OnMapReadyCall
     public void onConnectionFailed(ConnectionResult connectionResult) {
     }
 
+    public void markLocation(View v){
+        AlertDialog.Builder mBuilder = new AlertDialog.Builder(AllRoadsActivity.this);
+        View mView = getLayoutInflater().inflate(R.layout.all_roads_dialog_spinner, null);
+        mBuilder.setTitle("Spinner in custom dialog");
+
+        mSpinnerAge = (Spinner) mView.findViewById(R.id.spinnerAge);
+        ArrayAdapter<String> adapterAge = new ArrayAdapter<String>(AllRoadsActivity.this,
+                android.R.layout.simple_spinner_item,
+                getResources().getStringArray(R.array.ageList));
+        adapterAge.setDropDownViewResource(android.R.layout.simple_spinner_item);
+        mSpinnerAge.setAdapter(adapterAge);
+
+
+        mSpinnerSeason = (Spinner) mView.findViewById(R.id.spinnerSeason);
+        ArrayAdapter<String> adapterSeason = new ArrayAdapter<String>(AllRoadsActivity.this,
+                android.R.layout.simple_spinner_item,
+                getResources().getStringArray(R.array.seasonList));
+        adapterSeason.setDropDownViewResource(android.R.layout.simple_spinner_item);
+        mSpinnerSeason.setAdapter(adapterSeason);
+
+        mSpinnerDay = (Spinner) mView.findViewById(R.id.spinnerDay);
+        ArrayAdapter<String> adapterDay = new ArrayAdapter<String>(AllRoadsActivity.this,
+                android.R.layout.simple_spinner_item,
+                getResources().getStringArray(R.array.dayList));
+        adapterDay.setDropDownViewResource(android.R.layout.simple_spinner_item);
+        mSpinnerDay.setAdapter(adapterDay);
+
+        mSpinnerTime = (Spinner) mView.findViewById(R.id.spinnerTime);
+        ArrayAdapter<String> adapterTime = new ArrayAdapter<String>(AllRoadsActivity.this,
+                android.R.layout.simple_spinner_item,
+                getResources().getStringArray(R.array.timeList));
+        adapterTime.setDropDownViewResource(android.R.layout.simple_spinner_item);
+        mSpinnerTime.setAdapter(adapterTime);
+        time = mSpinnerTime.getSelectedItem().toString();
+        age = mSpinnerAge.getSelectedItem().toString();
+        season = mSpinnerSeason.getSelectedItem().toString();
+        day = mSpinnerDay.getSelectedItem().toString();
+
+        int spinnerPosition = adapterAge.getPosition(age);
+        mSpinnerAge.setSelection(spinnerPosition);
+        spinnerPosition = adapterDay.getPosition(day);
+        mSpinnerDay.setSelection(spinnerPosition);
+        spinnerPosition = adapterSeason.getPosition(season);
+        mSpinnerSeason.setSelection(spinnerPosition);
+        spinnerPosition = adapterTime.getPosition(time);
+        mSpinnerTime.setSelection(spinnerPosition);
+
+        mBuilder.setPositiveButton("Ok",
+                new DialogInterface.OnClickListener() {
+
+                    public void onClick(DialogInterface dialog, int i) {
+
+                        mGoogleMap.clear();
+                        executeQuery(time, age, season);
+                        dialog.dismiss();
+                    }
+                });
+        mBuilder.setNegativeButton("Dismiss",
+                new DialogInterface.OnClickListener() {
+
+                    public void onClick(DialogInterface dialog, int i) {
+                        dialog.dismiss();
+                    }
+                });
+        mBuilder.setView(mView);
+        AlertDialog dialog = mBuilder.create();
+        dialog.show();
+    }
+
+    public List<String> getIds(List<TableRow> rows){
+        List<String> keys = new ArrayList<>();
+        if(rows != null){
+            for (TableRow row : rows) {
+                for (TableCell field : row.getF()) {
+                    keys.add((String)field.getV());
+                }
+            }
+        }
+
+        return keys;
+    }
+
+    public void executeQuery(String time, String age, String season){
+        final String query = composeQuery(time, age, season);
+
+        Thread thread = new Thread(){
+            public void run(){
+                AssetManager am = getAssets();
+                Context context = getApplicationContext();
+                BigQueryConnector bigQuery = new BigQueryConnector(am, query, context);
+                try {
+                    List<TableRow> rows = bigQuery.start_bigquery();
+                    List <String> keys = getIds(rows);
+                    for(String key: keys){
+                        getLocations(key);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        };
+        thread.start();
+    }
+
+    public String composeQuery(String time, String age, String season){
+        String query = "SELECT event_param.value.String_value \n" +
+                "FROM `ukrbikeapp.info_androidhive_firebase_ANDROID.app_events_*`,\n" +
+                "  UNNEST(event_dim) as event,\n" +
+                "  UNNEST(event.params) as event_param,\n" +
+                "  UNNEST(user_dim.user_properties) as user_prop,\n" +
+                "  UNNEST([EXTRACT(HOUR FROM TIMESTAMP_MICROS(event.timestamp_micros))]) AS hr\n" +
+                "WHERE event.name = \"add_road\" \n" +
+                "AND user_prop.key = \"age\" AND event_param.key = \"item_id\" \n";
+        switch (time){
+            case "morning":
+                query += " AND hr >= 6 AND hr < 11\n";
+                break;
+            case "afternoon":
+                query += " AND hr >= 11 AND hr < 17\n";
+                break;
+            case "evening":
+                query += " AND hr >= 17 AND hr < 24\n";
+                break;
+            case "night":
+                query += " AND hr >= 0 AND hr < 6\n";
+                break;
+        }
+        switch (age){
+            case "child":
+                query += " AND (CAST(user_prop.value.value.string_value as FLOAT64)) <= 12\n";
+                break;
+            case "teen":
+                query += " AND (CAST(user_prop.value.value.string_value as FLOAT64)) > 12" +
+                        " AND (CAST(user_prop.value.value.string_value as FLOAT64)) <= 18\n";
+                break;
+            case "young":
+                query += " AND (CAST(user_prop.value.value.string_value as FLOAT64)) > 18" +
+                        " AND (CAST(user_prop.value.value.string_value as FLOAT64)) <= 30\n";
+                break;
+            case "middle":
+                query += " AND (CAST(user_prop.value.value.string_value as FLOAT64)) > 30" +
+                        " AND (CAST(user_prop.value.value.string_value as FLOAT64)) <= 60\n";
+                break;
+            case "senior":
+                query += " AND (CAST(user_prop.value.value.string_value as FLOAT64)) > 60\n";
+                break;
+        }
+        switch (season){
+            case "summer":
+                query += "AND (_TABLE_SUFFIX LIKE '201_06__' OR _TABLE_SUFFIX LIKE '201_07__' OR _TABLE_SUFFIX LIKE '201_08__')\n";
+                break;
+            case "autumn":
+                query += "AND (_TABLE_SUFFIX LIKE '201_09__' OR _TABLE_SUFFIX LIKE '201_10__' OR _TABLE_SUFFIX LIKE '201_11__')\n";
+                break;
+            case "winter":
+                query += "AND (_TABLE_SUFFIX LIKE '201_12__' OR _TABLE_SUFFIX LIKE '201_01__' OR _TABLE_SUFFIX LIKE '201_02__')\n";
+                break;
+            case "spring":
+                query += "AND (_TABLE_SUFFIX LIKE '201_05__' OR _TABLE_SUFFIX LIKE '201_04__' OR _TABLE_SUFFIX LIKE '201_03__')\n";
+                break;
+        }
+        return query;
+    }
+
 
     void getNames()
     {
@@ -202,6 +377,7 @@ public class AllRoadsActivity extends FragmentActivity implements OnMapReadyCall
                             .add(locationsList.get(size -2), locationsList.get(size-1))
                             .width(5)
                             .color(Color.BLUE));
+                    System.out.println("line added!");
                 }
             }
 

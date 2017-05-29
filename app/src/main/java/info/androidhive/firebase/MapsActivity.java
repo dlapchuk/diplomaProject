@@ -23,12 +23,15 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -99,6 +102,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private ChildEventListener mDangerEventListener, mShopEventListener, mStationEventListener;
     private LinkedList <LatLng> dangerous, shops, stations;
     private FirebaseAnalytics firebaseAnalytics;
+    private Switch trafficSwitch, mapTypeSwitch;
     Button startButton, stopButton;
     TextView stopwatch;
     long MillisecondTime, StartTime, TimeBuff, UpdateTime = 0L;
@@ -126,9 +130,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         stopButton = (Button)findViewById(R.id.stopButton);
         stopwatch = (TextView) findViewById(R.id.stopwatch);
         stopwatch.setText("00:00:00");
+        trafficSwitch = (Switch) findViewById(R.id.trafficSwitch);
+        mapTypeSwitch = (Switch) findViewById(R.id.mapTypeSwitch);
+        setSwitchListener();
         stopButton.setVisibility(View.INVISIBLE);
         handler = new Handler();
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
+    }
+
+    public void setSwitchListener(){
+        trafficSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener()
+        {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) //Line A
+            {
+                if(isChecked){
+                    mGoogleMap.setTrafficEnabled(true);
+                }
+                else{
+                    mGoogleMap.setTrafficEnabled(false);
+                }
+            }
+        });
+        mapTypeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener()
+        {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) //Line A
+            {
+                if(isChecked){
+                    mGoogleMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+                }
+                else{
+                    mGoogleMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+                }
+            }
+        });
     }
 
     @Override
@@ -200,7 +234,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onLocationChanged(Location location) {
-        mGoogleMap.setTrafficEnabled(true);
+
         float[] results = new float[1];
         if (mCurrLocationMarker != null) {
             mCurrLocationMarker.remove();
@@ -396,6 +430,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         startButton.setVisibility(View.VISIBLE);
         stopButton.setVisibility(View.INVISIBLE);
+        Calendar calendar = Calendar.getInstance();
+        int day = calendar.get(Calendar.DAY_OF_WEEK);
+        Bundle bundle = new Bundle();
+        switch (day) {
+            case Calendar.SATURDAY:
+            case Calendar.SUNDAY:
+                bundle.putString("day", "weekend");
+                break;
+            default:
+                bundle.putString("day", "workday");
+                break;
+        }
+
+        bundle.putString(FirebaseAnalytics.Param.ITEM_ID, key);
+        bundle.putFloat("distance", totalDistance);
+        bundle.putInt("time", (int)diff);
+        Toast.makeText(MapsActivity.this,"add road event", Toast.LENGTH_SHORT).show();
+        //Logs an app event.
+        firebaseAnalytics.logEvent("add_road", bundle);
     }
 
     private void saveCoordinate() {
