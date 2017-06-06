@@ -409,6 +409,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         line = mGoogleMap.addPolyline(options); //add Polyline
     }
 
+    public double getExponentValue(float sigma, float timeDiff){
+        return Math.exp(-(Math.pow(timeDiff, 2)/(2*sigma*sigma)));
+    }
+
+    private LinkedList<LatLng> smoothingGPS(LinkedList<LatLng> mLocations){
+        int delta = 1;
+        double gausKernel;
+        float sigma = delta * 3;
+        float SumForX, SumForY, WSum;
+        for(int i = 0; i < mLocations.size() - 1; i++){
+            System.out.println(i);
+            SumForX = 0;
+            SumForY = 0;
+            WSum = 0;
+            for(int j = i - 3; j < i+3; j++){
+                if(j > 0 && j < mLocations.size()){
+                    gausKernel = getExponentValue(sigma, (j-i)*delta);
+                    SumForX += mLocations.get(j).latitude * gausKernel;
+                    SumForY += mLocations.get(j).longitude * gausKernel;
+                    WSum += gausKernel;
+                }
+            }
+            LatLng newLatLng = new LatLng(SumForX / WSum, SumForY / WSum);
+            mLocations.set(i, newLatLng);
+        }
+        return mLocations;
+    }
+
     private void saveToFirebase() {
         boolean isFirst = true;
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
@@ -424,7 +452,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         String key = goals.push().getKey();
         goals.child(key).setValue(goal);
         DatabaseReference locations = mDatabase.child("goals").child(key).child("locations");
-
+        mLocations = smoothingGPS(mLocations);
         for (LatLng pos : mLocations) {
             locations.push().setValue(pos);
         }

@@ -41,6 +41,10 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
+import com.github.mikephil.charting.charts.PieChart;
+import com.github.mikephil.charting.data.PieData;
+import com.github.mikephil.charting.data.PieDataSet;
+import com.github.mikephil.charting.data.PieEntry;
 import com.google.android.gms.appindexing.Action;
 import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.appindexing.Thing;
@@ -94,6 +98,13 @@ public class AllRoadsActivity extends FragmentActivity implements OnMapReadyCall
     private ChildEventListener locChildEventListener;
     String age = "any", day = "any", time = "any", season = "any";
     Spinner mSpinnerAge, mSpinnerDay, mSpinnerSeason, mSpinnerTime;
+    TextView maxDistance, maxTime, minDistance, minTime, averegeDistance, averegeTime;
+    View mView, sView;
+    double max_distance, min_distance, avg_time, avg_distance;
+    int min_time, max_time;
+    float rainfall[] = {98.8f, 123.8f, 162.4f, 25.9f};
+    String monthNames[] = {"Jan", "Febr", "March", "Apr"};
+
 
     private GoogleApiClient client;
 
@@ -107,7 +118,11 @@ public class AllRoadsActivity extends FragmentActivity implements OnMapReadyCall
         mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFrag.getMapAsync(this);
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
-        executeQuery(time, age, season);
+        String query = addParamsToQuery(composeMainQuery(), time, age, season, day);
+        mView = getLayoutInflater().inflate(R.layout.all_road_statistic, null);
+        sView = getLayoutInflater().inflate(R.layout.all_roads_dialog_spinner, null);
+
+        executeMainQuery(query);
     }
 
     @Override
@@ -176,10 +191,10 @@ public class AllRoadsActivity extends FragmentActivity implements OnMapReadyCall
 
     public void markLocation(View v){
         AlertDialog.Builder mBuilder = new AlertDialog.Builder(AllRoadsActivity.this);
-        View mView = getLayoutInflater().inflate(R.layout.all_roads_dialog_spinner, null);
+        sView = getLayoutInflater().inflate(R.layout.all_roads_dialog_spinner, null);
         mBuilder.setTitle("Spinner in custom dialog");
 
-        mSpinnerAge = (Spinner) mView.findViewById(R.id.spinnerAge);
+        mSpinnerAge = (Spinner) sView.findViewById(R.id.spinnerAge);
         ArrayAdapter<String> adapterAge = new ArrayAdapter<String>(AllRoadsActivity.this,
                 android.R.layout.simple_spinner_item,
                 getResources().getStringArray(R.array.ageList));
@@ -187,33 +202,30 @@ public class AllRoadsActivity extends FragmentActivity implements OnMapReadyCall
         mSpinnerAge.setAdapter(adapterAge);
 
 
-        mSpinnerSeason = (Spinner) mView.findViewById(R.id.spinnerSeason);
+        mSpinnerSeason = (Spinner) sView.findViewById(R.id.spinnerSeason);
         ArrayAdapter<String> adapterSeason = new ArrayAdapter<String>(AllRoadsActivity.this,
                 android.R.layout.simple_spinner_item,
                 getResources().getStringArray(R.array.seasonList));
         adapterSeason.setDropDownViewResource(android.R.layout.simple_spinner_item);
         mSpinnerSeason.setAdapter(adapterSeason);
 
-        mSpinnerDay = (Spinner) mView.findViewById(R.id.spinnerDay);
+        mSpinnerDay = (Spinner) sView.findViewById(R.id.spinnerDay);
         ArrayAdapter<String> adapterDay = new ArrayAdapter<String>(AllRoadsActivity.this,
                 android.R.layout.simple_spinner_item,
                 getResources().getStringArray(R.array.dayList));
         adapterDay.setDropDownViewResource(android.R.layout.simple_spinner_item);
         mSpinnerDay.setAdapter(adapterDay);
 
-        mSpinnerTime = (Spinner) mView.findViewById(R.id.spinnerTime);
+        mSpinnerTime = (Spinner) sView.findViewById(R.id.spinnerTime);
         ArrayAdapter<String> adapterTime = new ArrayAdapter<String>(AllRoadsActivity.this,
                 android.R.layout.simple_spinner_item,
                 getResources().getStringArray(R.array.timeList));
         adapterTime.setDropDownViewResource(android.R.layout.simple_spinner_item);
         mSpinnerTime.setAdapter(adapterTime);
-        time = mSpinnerTime.getSelectedItem().toString();
-        age = mSpinnerAge.getSelectedItem().toString();
-        season = mSpinnerSeason.getSelectedItem().toString();
-        day = mSpinnerDay.getSelectedItem().toString();
 
-        int spinnerPosition = adapterAge.getPosition(age);
-        mSpinnerAge.setSelection(spinnerPosition);
+        //int spinnerPosition = adapterAge.getPosition(age);
+        //mSpinnerAge.setSelection(spinnerPosition);
+        int spinnerPosition;
         spinnerPosition = adapterDay.getPosition(day);
         mSpinnerDay.setSelection(spinnerPosition);
         spinnerPosition = adapterSeason.getPosition(season);
@@ -225,9 +237,13 @@ public class AllRoadsActivity extends FragmentActivity implements OnMapReadyCall
                 new DialogInterface.OnClickListener() {
 
                     public void onClick(DialogInterface dialog, int i) {
-
+                        //time = mSpinnerTime.getSelectedItem().toString();
+                        age = mSpinnerAge.getSelectedItem().toString();
+                        season = mSpinnerSeason.getSelectedItem().toString();
+                        day = mSpinnerDay.getSelectedItem().toString();
                         mGoogleMap.clear();
-                        executeQuery(time, age, season);
+                        String query = addParamsToQuery(composeMainQuery(), time, age, season, day);
+                        executeMainQuery(query);
                         dialog.dismiss();
                     }
                 });
@@ -238,7 +254,7 @@ public class AllRoadsActivity extends FragmentActivity implements OnMapReadyCall
                         dialog.dismiss();
                     }
                 });
-        mBuilder.setView(mView);
+        mBuilder.setView(sView);
         AlertDialog dialog = mBuilder.create();
         dialog.show();
     }
@@ -256,8 +272,106 @@ public class AllRoadsActivity extends FragmentActivity implements OnMapReadyCall
         return keys;
     }
 
-    public void executeQuery(String time, String age, String season){
-        final String query = composeQuery(time, age, season);
+    public void getStatistic(View view){
+        AlertDialog.Builder mBuilder = new AlertDialog.Builder(AllRoadsActivity.this);
+        View mView = getLayoutInflater().inflate(R.layout.all_road_statistic, null);
+        mBuilder.setTitle("Spinner in custom dialog");
+
+        String query = addParamsToQuery(composeStatisticQuery(), time, age, season, day);
+        executeStatisticQuery(query);
+        maxDistance = (TextView) mView.findViewById(R.id.maxDistance);
+        minDistance = (TextView) mView.findViewById(R.id.minDistance);
+        maxTime = (TextView) mView.findViewById(R.id.maxTime);
+        minTime = (TextView) mView.findViewById(R.id.minTime);
+        averegeDistance = (TextView) mView.findViewById(R.id.avgDistance);
+        averegeTime = (TextView) mView.findViewById(R.id.avgTime);
+
+        maxDistance.setText("Max distance: " + Double.toString(max_distance));
+        minDistance.setText("Min distance: " + Double.toString(min_distance));
+        maxTime.setText("Max time: " + Integer.toString(max_time));
+        minTime.setText("Min time: " + Integer.toString(min_time));
+        averegeDistance.setText("Average distance: " + Double.toString(avg_distance));
+        averegeTime.setText("Average time: " + Double.toString(avg_time));
+
+
+        List<PieEntry> pieEntry = new ArrayList<>();
+        for(int i=0; i< rainfall.length; i++){
+            pieEntry.add(new PieEntry(rainfall[i], monthNames[i]));
+        }
+        PieDataSet dataSet = new PieDataSet(pieEntry, "Rainfall");
+        PieData data = new PieData(dataSet);
+        PieChart chart = (PieChart) mView.findViewById(R.id.chart);
+
+        chart.setData(data);
+        chart.invalidate();
+
+        mBuilder.setPositiveButton("Ok",
+                new DialogInterface.OnClickListener() {
+
+                    public void onClick(DialogInterface dialog, int i) {
+                        dialog.dismiss();
+                    }
+                });
+        mBuilder.setNegativeButton("Dismiss",
+                new DialogInterface.OnClickListener() {
+
+                    public void onClick(DialogInterface dialog, int i) {
+                        dialog.dismiss();
+                    }
+                });
+        mBuilder.setView(mView);
+        AlertDialog dialog = mBuilder.create();
+        dialog.show();
+    }
+
+    public void executeStatisticQuery(final String query){
+
+        Thread thread = new Thread(){
+            public void run(){
+                AssetManager am = getAssets();
+                Context context = getApplicationContext();
+                BigQueryConnector bigQuery = new BigQueryConnector(am, query, context);
+                try {
+                    List<TableRow> rows = bigQuery.start_bigquery();
+                    if(rows != null){
+                        for(TableRow row: rows){
+                            max_distance = Double.valueOf((String) row.getF().get(0).getV());
+                            max_time = Integer.valueOf((String) row.getF().get(1).getV());
+                            min_distance = Double.valueOf((String) row.getF().get(2).getV());
+                            min_time = Integer.valueOf((String) row.getF().get(3).getV());
+                            avg_distance = Double.valueOf((String) row.getF().get(4).getV());
+                            avg_time = Double.valueOf((String) row.getF().get(5).getV());
+                            setStatisticValues(max_distance, max_time, min_distance, min_time, avg_distance, avg_time);
+                            //maxDistance = (TextView) mView.findViewById(R.id.maxDistanceValue);
+                            //maxDistance.setText("Max distance: " + Double.toString(max_distance));
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        };
+        thread.start();
+    }
+
+    private void setStatisticValues(final double max_distance, final int max_time,
+                                    final double min_distance, final int min_time,
+                                    final double avg_distance, final double avg_time) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                maxDistance = (TextView) mView.findViewById(R.id.maxDistance);
+                maxDistance.setText(Double.toString(max_distance));
+            }
+        });
+
+
+        String a = Double.toString(max_distance);
+        System.out.println(a);
+    }
+
+    public void executeMainQuery(final String query){
 
         Thread thread = new Thread(){
             public void run(){
@@ -279,7 +393,26 @@ public class AllRoadsActivity extends FragmentActivity implements OnMapReadyCall
         thread.start();
     }
 
-    public String composeQuery(String time, String age, String season){
+    public String composeStatisticQuery(){
+        String query = "SELECT\n" +
+                "  MAX(IF(param.key = \"distance\", param.value.double_value, NULL)) AS max_distance,\n" +
+                "  MAX(IF(param.key = \"time\", param.value.int_value, NULL)) AS max_time,\n" +
+                "  MIN(IF(param.key = \"distance\", param.value.double_value, NULL)) AS min_distance,\n" +
+                "  MIN(IF(param.key = \"time\", param.value.int_value, NULL)) AS min_time,\n" +
+                "  AVG(IF(param.key = \"distance\", param.value.double_value, NULL)) AS avg_distance,\n" +
+                "  AVG(IF(param.key = \"time\", param.value.int_value, NULL)) AS avg_time\n" +
+                "FROM \n" +
+                "  `ukrbikeapp.info_androidhive_firebase_ANDROID.app_events_*`,\n" +
+                "  UNNEST(event_dim) as event,\n" +
+                "  UNNEST(event.params) as param,\n" +
+                "  UNNEST(user_dim.user_properties) as user_prop,\n" +
+                "  UNNEST([EXTRACT(HOUR FROM TIMESTAMP_MICROS(event.timestamp_micros))]) AS hr \n" +
+                "WHERE event.name = \"add_road\" \n" +
+                "  AND user_prop.key = \"age\" \n";
+        return query;
+    }
+
+    public String composeMainQuery(){
         String query = "SELECT event_param.value.String_value \n" +
                 "FROM `ukrbikeapp.info_androidhive_firebase_ANDROID.app_events_*`,\n" +
                 "  UNNEST(event_dim) as event,\n" +
@@ -288,6 +421,10 @@ public class AllRoadsActivity extends FragmentActivity implements OnMapReadyCall
                 "  UNNEST([EXTRACT(HOUR FROM TIMESTAMP_MICROS(event.timestamp_micros))]) AS hr\n" +
                 "WHERE event.name = \"add_road\" \n" +
                 "AND user_prop.key = \"age\" AND event_param.key = \"item_id\" \n";
+        return query;
+    }
+
+    public String addParamsToQuery(String query, String time, String age, String season, String day){
         switch (time){
             case "morning":
                 query += " AND hr >= 6 AND hr < 11\n";
@@ -336,6 +473,15 @@ public class AllRoadsActivity extends FragmentActivity implements OnMapReadyCall
                 query += "AND (_TABLE_SUFFIX LIKE '201_05__' OR _TABLE_SUFFIX LIKE '201_04__' OR _TABLE_SUFFIX LIKE '201_03__')\n";
                 break;
         }
+        switch(day){
+            case "workday":
+                query += "AND (SELECT COUNTIF(key = 'day' AND value.string_value = \"workday\") FROM UNNEST(event.params)) > 0";
+                break;
+            case "weekend":
+                query += "AND (SELECT COUNTIF(key = 'day' AND value.string_value = \"weekend\") FROM UNNEST(event.params)) > 0";
+                break;
+        }
+        System.out.println(query);
         return query;
     }
 
